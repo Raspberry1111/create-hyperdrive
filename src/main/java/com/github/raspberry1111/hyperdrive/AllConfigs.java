@@ -1,6 +1,8 @@
-package com.github.raspberry1111.hyperdrive.configs;
+package com.github.raspberry1111.hyperdrive;
 
-import com.github.raspberry1111.hyperdrive.Hyperdrive;
+import com.github.raspberry1111.hyperdrive.configs.CClient;
+import com.github.raspberry1111.hyperdrive.configs.CServer;
+import com.github.raspberry1111.hyperdrive.configs.CStress;
 import com.simibubi.create.api.stress.BlockStressValues;
 import net.createmod.catnip.config.ConfigBase;
 import net.neoforged.bus.api.SubscribeEvent;

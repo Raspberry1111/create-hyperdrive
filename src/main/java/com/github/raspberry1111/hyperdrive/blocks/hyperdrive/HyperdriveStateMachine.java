@@ -1,14 +1,9 @@
 package com.github.raspberry1111.hyperdrive.blocks.hyperdrive;
 
 import com.github.raspberry1111.hyperdrive.Hyperdrive;
-import com.github.raspberry1111.hyperdrive.configs.AllConfigs;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
-import org.jline.utils.Log;
+import com.github.raspberry1111.hyperdrive.AllConfigs;
+import net.minecraft.client.renderer.blockentity.ShulkerBoxRenderer;
 
-import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class HyperdriveStateMachine {
@@ -16,10 +11,8 @@ public class HyperdriveStateMachine {
     public static final int ACTIVE_TICKS = 2;
     private final Supplier<Float> speedSupplier;
     private final Runnable onTrigger;
-
     public Phase phase = Phase.CHARGING;
     public ShulkerStatus shulkerStatus = ShulkerStatus.NORMAL;
-
     int currentProgress = 0;
 
     HyperdriveStateMachine(Supplier<Float> speedSupplier, Runnable onTrigger) {
@@ -50,6 +43,10 @@ public class HyperdriveStateMachine {
         }
     }
 
+    public void moveTowardsZero() {
+        currentProgress = 0;
+    }
+
     private void tickCharging() {
         int work = (int) Math.round(speedSupplier.get() * shulkerStatus.chargeSpeedMultiplier());
         currentProgress += work;
@@ -57,6 +54,8 @@ public class HyperdriveStateMachine {
         if (Math.abs(currentProgress) >= targetChargeProgress()) {
             currentProgress = 0;
             phase = Phase.ACTIVE;
+
+            shulkerStatus = ShulkerStatus.NORMAL;
         }
     }
 
@@ -64,21 +63,51 @@ public class HyperdriveStateMachine {
         currentProgress += 1;
 
         if (currentProgress >= ACTIVE_TICKS) {
-            onTrigger.run();
-
             currentProgress = 0;
             phase = Phase.COOLDOWN;
+
+            onTrigger.run(); // this needs to run after we change the phase or whenever sable teleports the contraption it will trigger again
         }
     }
 
     private void tickCooldown() {
-        Hyperdrive.LOGGER.debug("Target = {}", targetCooldownProgress());
         currentProgress += LAZY_TICK_RATE;
 
         if (currentProgress >= targetCooldownProgress()) {
-            currentProgress = 0;
-            phase = Phase.CHARGING;
+            endCooldown();
         }
+    }
+
+    private void endCooldown() {
+        currentProgress = 0;
+        phase = Phase.CHARGING;
+    }
+
+    public boolean infuse() {
+        switch (phase) {
+            case COOLDOWN -> {
+                endCooldown();
+
+                shulkerStatus = HyperdriveStateMachine.ShulkerStatus.EXHAUSTED;
+                return true;
+            }
+            case CHARGING -> {
+                if (shulkerStatus == ShulkerStatus.EXHAUSTED) {
+                    shulkerStatus = ShulkerStatus.NORMAL;
+                    return true;
+                }
+
+                if (shulkerStatus == ShulkerStatus.NORMAL) {
+                    shulkerStatus = ShulkerStatus.INFUSED;
+                    return true;
+                }
+
+                return false;
+            }
+            case ACTIVE -> {
+            }
+        }
+        return false;
     }
 
     public enum ShulkerStatus {
@@ -100,11 +129,5 @@ public class HyperdriveStateMachine {
         CHARGING, ACTIVE, COOLDOWN
     }
 
-    public record TickContext(
-            HyperdriveBlockEntity be,
-            Level level,
-            BlockPos pos,
-            BlockState state
-    ) {
-    }
+
 }
