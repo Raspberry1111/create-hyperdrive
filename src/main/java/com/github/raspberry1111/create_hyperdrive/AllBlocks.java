@@ -4,13 +4,9 @@ import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBl
 import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockItem;
 import com.github.raspberry1111.create_hyperdrive.configs.CStress;
 import com.simibubi.create.foundation.data.AssetLookup;
-import com.simibubi.create.foundation.data.BlockStateGen;
 import com.simibubi.create.foundation.data.SharedProperties;
 import com.tterrag.registrate.util.entry.BlockEntry;
-import net.minecraft.core.Direction;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.MapColor;
-import net.neoforged.neoforge.client.model.generators.ConfiguredModel;
 
 import static com.github.raspberry1111.create_hyperdrive.CreateHyperdrive.REGISTRATE;
 import static com.simibubi.create.foundation.data.ModelGen.customItemModel;
@@ -29,7 +25,7 @@ public class AllBlocks {
             }))
             .transform(CStress.setImpact(16.0))
             .transform(pickaxeOnly())
-            .item(HyperdriveBlockItem::new)
+            .item(HyperdriveBlockItem::withShulker)
             .transform(customItemModel())
             .register();
 

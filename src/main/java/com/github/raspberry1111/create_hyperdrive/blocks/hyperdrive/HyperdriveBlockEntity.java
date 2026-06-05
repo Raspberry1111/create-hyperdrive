@@ -6,24 +6,36 @@ import com.github.raspberry1111.create_hyperdrive.CreateHyperdrive;
 import com.github.raspberry1111.create_hyperdrive.AllConfigs;
 import com.github.raspberry1111.create_hyperdrive.utility.MathHelper;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
+import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import com.simibubi.create.foundation.blockEntity.behaviour.CenteredSideValueBoxTransform;
+import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.INamedIconOptions;
+import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollOptionBehaviour;
+import com.simibubi.create.foundation.gui.AllIcons;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.createmod.catnip.animation.LerpedFloat;
+import net.createmod.catnip.lang.Lang;
+import net.createmod.catnip.math.VecHelper;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import dev.egg.SubLevelWarper;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.Arrays;
 import java.util.List;
@@ -36,6 +48,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     final HyperdriveStateMachine stateMachine;
     public LerpedFloat headAnimation;
     protected LerpedFloat headAngle;
+    protected ScrollOptionBehaviour<TargetDimension> targetDimensions;
     private float oldProgress = 0;
 
     public HyperdriveBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
@@ -67,6 +80,16 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         } else {
             return true;
         }
+    }
+
+    @Override
+    public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
+        super.addBehaviours(behaviours);
+
+        targetDimensions = new ScrollOptionBehaviour<>(TargetDimension.class,
+                Component.translatable(CreateHyperdrive.MODID + ".hyperdrive.target_dimension"), this, new TargetDimensionValueBox());
+        targetDimensions.value = 0;
+        behaviours.add(targetDimensions);
     }
 
     @Override
@@ -136,8 +159,13 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
         SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
         if (subLevel instanceof ServerSubLevel serverSubLevel) {
-            if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, level.getServer().getLevel(Level.NETHER), ALLOW_LIST)) {
-                SubLevelWarper.WarpSubLevel(serverSubLevel, level.getServer().getLevel(Level.NETHER));
+            ResourceKey<Level> target = switch (targetDimensions.get()) {
+                case NETHER -> Level.NETHER;
+                case END -> Level.END;
+                case OVERWORLD -> Level.OVERWORLD;
+            };
+            if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, level.getServer().getLevel(target), ALLOW_LIST)) {
+                SubLevelWarper.WarpSubLevel(serverSubLevel, level.getServer().getLevel(target));
             }
         }
     }
@@ -190,7 +218,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     }
 
     public ItemStack getItemStackWithData() {
-        ItemStack stack = AllBlocks.HYPERDRIVE.asStack();
+        ItemStack stack = HyperdriveBlockItem.filledStack();
 
         stack.set(AllDataComponents.PHASE, stateMachine.phase);
         stack.set(AllDataComponents.SHULKER_STATUS, stateMachine.shulkerStatus);
@@ -199,5 +227,54 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         return stack;
     }
 
+    public enum TargetDimension implements INamedIconOptions {
+        OVERWORLD(AllIcons.I_ROTATE_NEVER_PLACE),
+        NETHER(AllIcons.I_3x3),
+        END(AllIcons.I_ACTIVE),
+        ;
 
+        private final String translationKey;
+        private final AllIcons icon;
+
+        TargetDimension(AllIcons icon) {
+            this.icon = icon;
+            this.translationKey = CreateHyperdrive.MODID + ".hyperdrive." + Lang.asId(name());
+        }
+
+        @Override
+        public AllIcons getIcon() {
+            return icon;
+        }
+
+        @Override
+        public String getTranslationKey() {
+            return translationKey;
+        }
+    }
+
+    private static class TargetDimensionValueBox extends CenteredSideValueBoxTransform {
+        public TargetDimensionValueBox() {
+            super((blockState, direction) -> {
+                Direction facing = blockState.getValue(HyperdriveBlock.FACING);
+                return facing.getAxis() != direction.getAxis();
+            });
+        }
+
+        @Override
+        protected Vec3 getSouthLocation() {
+            return VecHelper.voxelSpace(8, 8, 15.5);
+        }
+
+        @Override
+        public Vec3 getLocalOffset(LevelAccessor level, BlockPos pos, BlockState state) {
+            Direction facing = state.getValue(HyperdriveBlock.FACING);
+            return super.getLocalOffset(level, pos, state).add(Vec3.atLowerCornerOf(facing.getNormal())
+                    .scale(-4 / 16f));
+        }
+
+        @Override
+        public float getScale() {
+            return super.getScale();
+        }
+    }
 }

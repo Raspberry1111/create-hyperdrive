@@ -63,8 +63,6 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
                 .rotateToFace(Direction.SOUTH, opposite)
                 .setChanged();
 
-        CreateHyperdrive.LOGGER.debug("lid {}", lid.toString());
-
         Direction shulkerAlign = Direction.fromAxisAndDirection(rotationAxis(), direction.getAxisDirection());
         shulkerHead.translate(getVisualPosition())
                 .center()

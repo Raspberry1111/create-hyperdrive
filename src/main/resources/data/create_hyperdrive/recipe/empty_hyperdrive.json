@@ -1,0 +1,35 @@
+{
+  "type": "create:mechanical_crafting",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:true"
+    }
+  ],
+  "accept_mirrored": false,
+  "key": {
+    "E": {
+      "item": "create:electron_tube"
+    },
+    "S": {
+      "item": "minecraft:shulker_shell"
+    },
+    "P": {
+      "item": "create:precision_mechanism"
+    },
+    "O": {
+      "item": "create:sturdy_sheet"
+    },
+    "B": {
+      "item": "create:brass_casing"
+    }
+  },
+  "pattern": [
+    "ESE",
+    "P P",
+    "OSO",
+    "BBB"
+  ],
+  "result": {
+    "id": "create_hyperdrive:empty_hyperdrive"
+  }
+}
