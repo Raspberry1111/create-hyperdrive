@@ -19,6 +19,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 import java.util.Collection;
@@ -58,11 +59,20 @@ public class MathHelper {
         );
     }
 
+    public static double dimensionScale(Level from, Level to) {
+        return from.dimensionType().coordinateScale() / to.dimensionType().coordinateScale();
+    }
+
     public static boolean subLevelChainIntersectsAny(SubLevel baseSubLevel, ServerLevel targetLevel, Collection<ResourceLocation> allowList) {
         final Collection<SubLevel> subLevels = SubLevelHelper.getConnectedChain(baseSubLevel);
 
+        double scaleRatio = dimensionScale(baseSubLevel.getLevel(), targetLevel);
         for (SubLevel subLevel : subLevels) {
             final BoundingBox3dc boundingBox = subLevel.boundingBox();
+            Vector3d oldCenter = boundingBox.center();
+            Vector3d newCenter = boundingBox.center().mul(scaleRatio, scaleRatio, scaleRatio);
+
+            final BoundingBox3d transformedBoundingBox = boundingBox.move(newCenter.x - oldCenter.x, newCenter.y - oldCenter.y, newCenter.z - oldCenter.z, new BoundingBox3d());
 
             if (boundingBox.minY() < targetLevel.getMinBuildHeight()) {
                 return true;

@@ -36,14 +36,14 @@ import dev.egg.SubLevelWarper;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3d;
 
 import java.util.Arrays;
 import java.util.List;
 
 public class HyperdriveBlockEntity extends KineticBlockEntity {
     public static final List<ResourceLocation> ALLOW_LIST = List.of(
-            ResourceLocation.fromNamespaceAndPath("minecraft", "air"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "water")
+            ResourceLocation.fromNamespaceAndPath("minecraft", "air")
     );
     final HyperdriveStateMachine stateMachine;
     public LerpedFloat headAnimation;
@@ -164,8 +164,12 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
                 case END -> Level.END;
                 case OVERWORLD -> Level.OVERWORLD;
             };
-            if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, level.getServer().getLevel(target), ALLOW_LIST)) {
-                SubLevelWarper.WarpSubLevel(serverSubLevel, level.getServer().getLevel(target));
+
+            ServerLevel targetLevel = level.getServer().getLevel(target);
+            if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST)) {
+                double scale = MathHelper.dimensionScale(serverSubLevel.getLevel(), targetLevel);
+                Vector3d position = serverSubLevel.logicalPose().position().mul(scale, 1.0, scale, new Vector3d());
+                SubLevelWarper.WarpSubLevel(serverSubLevel, targetLevel, position);
             }
         }
     }
@@ -185,8 +189,8 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
     @Override
     public void write(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
-        compound.putString("phase", stateMachine.phase.getSerializedName());
-        compound.putString("shulker_status", stateMachine.shulkerStatus.getSerializedName());
+        compound.putString("phase", stateMachine.phase.toString());
+        compound.putString("shulker_status", stateMachine.shulkerStatus.toString());
         compound.putInt("current_progress", stateMachine.currentProgress);
 
         super.write(compound, registries, clientPacket);
