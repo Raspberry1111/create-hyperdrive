@@ -74,14 +74,14 @@ public class MathHelper {
 
             final BoundingBox3d transformedBoundingBox = boundingBox.move(newCenter.x - oldCenter.x, newCenter.y - oldCenter.y, newCenter.z - oldCenter.z, new BoundingBox3d());
 
-            if (boundingBox.minY() < targetLevel.getMinBuildHeight()) {
+            if (transformedBoundingBox.minY() < targetLevel.getMinBuildHeight()) {
                 return true;
             }
 
-            if (boundingBoxIntersectsBlocks(boundingBox, targetLevel, allowList)) {
+            if (boundingBoxIntersectsBlocks(transformedBoundingBox, targetLevel, allowList)) {
                 return true;
             }
-            if (boundingBoxIntersectsSubLevels(boundingBox, targetLevel)) {
+            if (boundingBoxIntersectsSubLevels(transformedBoundingBox, targetLevel)) {
                 return true;
             }
         }
