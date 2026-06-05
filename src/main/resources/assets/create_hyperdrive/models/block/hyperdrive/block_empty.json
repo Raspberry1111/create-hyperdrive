@@ -1,0 +1,374 @@
+{
+  "format_version": "1.9.0",
+  "credit": "Made with Blockbench",
+  "render_type": "minecraft:cutout_mipped",
+  "texture_size": [
+    32,
+    32
+  ],
+  "textures": {
+    "1": "create:block/funnel/brass_funnel_frame",
+    "4": "create:block/brass_gearbox",
+    "5": "create:block/brass_casing",
+    "6": "create_hyperdrive:block/hyperdrive"
+  },
+  "elements": [
+    {
+      "name": "n/s_grove",
+      "from": [
+        6,
+        10,
+        0
+      ],
+      "to": [
+        10,
+        6,
+        16
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          8,
+          9,
+          8
+        ]
+      },
+      "faces": {
+        "east": {
+          "uv": [
+            8,
+            8,
+            16,
+            9
+          ],
+          "texture": "#6"
+        },
+        "west": {
+          "uv": [
+            8,
+            11,
+            16,
+            12
+          ],
+          "texture": "#6"
+        },
+        "up": {
+          "uv": [
+            8,
+            11,
+            16,
+            9
+          ],
+          "rotation": 90,
+          "texture": "#6"
+        },
+        "down": {
+          "uv": [
+            8,
+            9,
+            16,
+            11
+          ],
+          "rotation": 90,
+          "texture": "#6"
+        }
+      }
+    },
+    {
+      "name": "e/w_grove",
+      "from": [
+        0,
+        10,
+        6
+      ],
+      "to": [
+        16,
+        6,
+        10
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          8,
+          9,
+          8
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            8,
+            11,
+            16,
+            13
+          ],
+          "texture": "#6"
+        },
+        "south": {
+          "uv": [
+            8,
+            11,
+            16,
+            13
+          ],
+          "texture": "#6"
+        },
+        "up": {
+          "uv": [
+            8,
+            8,
+            16,
+            10
+          ],
+          "texture": "#6"
+        },
+        "down": {
+          "uv": [
+            8,
+            14,
+            16,
+            16
+          ],
+          "texture": "#6"
+        }
+      }
+    },
+    {
+      "name": "inlet",
+      "from": [
+        2,
+        0,
+        14
+      ],
+      "to": [
+        14,
+        1,
+        2
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          1,
+          -12,
+          13
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            1,
+            15,
+            2
+          ],
+          "texture": "#1"
+        },
+        "east": {
+          "uv": [
+            1,
+            1,
+            15,
+            2
+          ],
+          "texture": "#1"
+        },
+        "south": {
+          "uv": [
+            1,
+            1,
+            15,
+            2
+          ],
+          "texture": "#1"
+        },
+        "west": {
+          "uv": [
+            1,
+            1,
+            15,
+            2
+          ],
+          "texture": "#1"
+        },
+        "up": {
+          "uv": [
+            2,
+            2,
+            14,
+            14
+          ],
+          "texture": "#4"
+        }
+      }
+    },
+    {
+      "name": "interior",
+      "from": [
+        1,
+        1,
+        15
+      ],
+      "to": [
+        15,
+        15,
+        1
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          0,
+          -7,
+          14
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#6"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#6"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#6"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#6"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#5"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#5"
+        }
+      }
+    },
+    {
+      "name": "exterior",
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#6"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#6"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#6"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#6"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#5"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#1"
+        }
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "hyperdrive",
+      "origin": [
+        8,
+        8,
+        8
+      ],
+      "scope": 0,
+      "color": 0,
+      "children": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  ]
+}

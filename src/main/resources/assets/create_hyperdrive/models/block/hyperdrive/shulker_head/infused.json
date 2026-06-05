@@ -1,0 +1,91 @@
+{
+  "format_version": "1.9.0",
+  "credit": "Made with Blockbench",
+  "texture_size": [
+    32,
+    52
+  ],
+  "textures": {
+    "1": "create_hyperdrive:block/shulker_head"
+  },
+  "elements": [
+    {
+      "name": "head",
+      "from": [
+        4,
+        4,
+        4
+      ],
+      "to": [
+        12,
+        12,
+        12
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          8,
+          8,
+          8
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            2.46154,
+            8,
+            4.92308
+          ],
+          "texture": "#1"
+        },
+        "east": {
+          "uv": [
+            0,
+            2.46154,
+            4,
+            4.92308
+          ],
+          "texture": "#1"
+        },
+        "south": {
+          "uv": [
+            12,
+            2.46154,
+            16,
+            4.92308
+          ],
+          "texture": "#1"
+        },
+        "west": {
+          "uv": [
+            8,
+            2.46154,
+            12,
+            4.92308
+          ],
+          "texture": "#1"
+        },
+        "up": {
+          "uv": [
+            4,
+            0,
+            8,
+            2.46154
+          ],
+          "texture": "#1"
+        },
+        "down": {
+          "uv": [
+            8,
+            0,
+            12,
+            2.46154
+          ],
+          "texture": "#1"
+        }
+      }
+    }
+  ]
+}

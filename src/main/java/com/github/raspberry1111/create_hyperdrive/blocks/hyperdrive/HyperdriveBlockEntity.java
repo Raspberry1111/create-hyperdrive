@@ -1,0 +1,203 @@
+package com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive;
+
+import com.github.raspberry1111.create_hyperdrive.AllBlocks;
+import com.github.raspberry1111.create_hyperdrive.AllDataComponents;
+import com.github.raspberry1111.create_hyperdrive.CreateHyperdrive;
+import com.github.raspberry1111.create_hyperdrive.AllConfigs;
+import com.github.raspberry1111.create_hyperdrive.utility.MathHelper;
+import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
+import dev.ryanhcode.sable.companion.SableCompanion;
+import dev.ryanhcode.sable.companion.SubLevelAccess;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import net.createmod.catnip.animation.LerpedFloat;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.monster.Shulker;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import dev.egg.SubLevelWarper;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.phys.AABB;
+
+import java.util.Arrays;
+import java.util.List;
+
+public class HyperdriveBlockEntity extends KineticBlockEntity {
+    public static final List<ResourceLocation> ALLOW_LIST = List.of(
+            ResourceLocation.fromNamespaceAndPath("minecraft", "air"),
+            ResourceLocation.fromNamespaceAndPath("minecraft", "water")
+    );
+    final HyperdriveStateMachine stateMachine;
+    public LerpedFloat headAnimation;
+    protected LerpedFloat headAngle;
+    private float oldProgress = 0;
+
+    public HyperdriveBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
+
+        setLazyTickRate(HyperdriveStateMachine.LAZY_TICK_RATE);
+        stateMachine = new HyperdriveStateMachine(this::getSpeed, this::triggerTeleportation);
+    }
+
+    public float getOpenProgress(float progress, float partialTick) {
+        var partialWork = partialTick * (float) stateMachine.shulkerStatus.chargeSpeedMultiplier();
+
+        if (!shouldTick()) {
+            partialWork = 0;
+        }
+
+        var openProgress = switch (stateMachine.phase) {
+            case COOLDOWN -> 0;
+            case ACTIVE ->
+                    (HyperdriveStateMachine.ACTIVE_TICKS - (progress + partialWork)) / HyperdriveStateMachine.ACTIVE_TICKS;
+            case CHARGING -> (progress + partialWork * getSpeed()) / HyperdriveStateMachine.targetChargeProgress();
+        };
+        return Math.clamp(openProgress, -1, 1);
+    }
+
+    public boolean shouldTick() {
+        if (stateMachine.phase == HyperdriveStateMachine.Phase.CHARGING) {
+            return isSpeedRequirementFulfilled() && SableCompanion.INSTANCE.getContaining(this) != null;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        oldProgress = stateMachine.currentProgress;
+
+
+        if (!shouldTick()) {
+            stateMachine.moveTowardsZero();
+            return;
+        }
+
+        stateMachine.tick();
+
+        if (stateMachine.phase == HyperdriveStateMachine.Phase.CHARGING) {
+            pushEntities();
+        }
+
+    }
+
+    private void pushEntities() {
+        if (level == null) {
+        }
+//
+//        BlockState state = getBlockState();
+//        Direction direction = getBlockState().getValue(HyperdriveBlock.FACING);
+//        Vec3 worldPosition = SableCompanion.INSTANCE.projectOutOfSubLevel(getLevel(), (Position) getBlockPos().getBottomCenter());
+//        AABB aabb = Shulker.getProgressDeltaAabb(1.0F, direction, getOpenProgress(oldProgress, 0), getOpenProgress(stateMachine.currentProgress, 0)).move(worldPosition);
+//
+//        CreateHyperdrive.LOGGER.debug("pushEntities position {}", getBlockPos());
+//        List<Entity> list = level.getEntities(null, aabb);
+//        if (!list.isEmpty()) {
+//            for (Entity entity : list) {
+//                if (entity.getPistonPushReaction() != PushReaction.IGNORE) {
+//
+//                    AABB entityAABB = entity.getBoundingBox();
+//
+//                    double overlapX = Math.min(aabb.maxX, entityAABB.maxX) - Math.max(aabb.minX, entityAABB.minX);
+//                    double overlapY = Math.min(aabb.maxY, entityAABB.maxY) - Math.max(aabb.minY, entityAABB.minY);
+//                    double overlapZ = Math.min(aabb.maxZ, entityAABB.maxZ) - Math.max(aabb.minZ, entityAABB.minZ);
+//
+//                    CreateHyperdrive.LOGGER.debug("overlap: ( {} {} ) ( {} {} ) | {} {} {}", aabb.minY, aabb.maxY, entityAABB.minY, entityAABB.maxY, overlapX, overlapY, overlapZ);
+//                    entity.move(
+//                            MoverType.SHULKER_BOX,
+//                            new Vec3(
+//                                    overlapX * direction.getStepX(),
+//                                    overlapY * direction.getStepY(),
+//                                    overlapZ * direction.getStepZ()
+//                            )
+//                    );
+//                }
+//            }
+//        }
+    }
+
+    @Override
+    public void lazyTick() {
+        super.lazyTick();
+        stateMachine.lazyTick();
+    }
+
+    private void triggerTeleportation() {
+        if (level == null || level.isClientSide) {
+            return;
+        }
+
+        SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
+        if (subLevel instanceof ServerSubLevel serverSubLevel) {
+            if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, level.getServer().getLevel(Level.NETHER), ALLOW_LIST)) {
+                SubLevelWarper.WarpSubLevel(serverSubLevel, level.getServer().getLevel(Level.NETHER));
+            }
+        }
+    }
+
+    @Override
+    public boolean isSpeedRequirementFulfilled() {
+        if (!super.isSpeedRequirementFulfilled()) {
+            return false;
+        }
+
+        if (stateMachine.phase != HyperdriveStateMachine.Phase.CHARGING) {
+            return true;
+        }
+
+        return Math.abs(getSpeed()) >= AllConfigs.server().minimumRPM.get();
+    }
+
+    @Override
+    public void write(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
+        compound.putString("phase", stateMachine.phase.getSerializedName());
+        compound.putString("shulker_status", stateMachine.shulkerStatus.getSerializedName());
+        compound.putInt("current_progress", stateMachine.currentProgress);
+
+        super.write(compound, registries, clientPacket);
+    }
+
+    @Override
+    protected void read(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
+        for (HyperdriveStateMachine.Phase phase : HyperdriveStateMachine.Phase.values()) {
+            if (phase.name().equals(compound.getString("phase"))) {
+                stateMachine.phase = phase;
+                break;
+            }
+        }
+
+        for (HyperdriveStateMachine.ShulkerStatus status : HyperdriveStateMachine.ShulkerStatus.values()) {
+            if (status.name().equals(compound.getString("shulker_status"))) {
+                stateMachine.shulkerStatus = status;
+                break;
+            }
+        }
+
+
+        stateMachine.currentProgress = compound.getInt("current_progress");
+        super.read(compound, registries, clientPacket);
+    }
+
+    public AABB getBoundingBox(BlockState state) {
+        return Shulker.getProgressAabb(1.0F, state.getValue(HyperdriveBlock.FACING), Math.abs(getOpenProgress(stateMachine.currentProgress, 0)));
+    }
+
+    public ItemStack getItemStackWithData() {
+        ItemStack stack = AllBlocks.HYPERDRIVE.asStack();
+
+        stack.set(AllDataComponents.PHASE, stateMachine.phase);
+        stack.set(AllDataComponents.SHULKER_STATUS, stateMachine.shulkerStatus);
+        stack.set(AllDataComponents.CURRENT_PROGRESS, stateMachine.currentProgress);
+
+        return stack;
+    }
+
+
+}
