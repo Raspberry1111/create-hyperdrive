@@ -17,6 +17,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
@@ -30,6 +31,8 @@ import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Optional;
 
 public class HyperdriveBlockItem extends BlockItem {
     public HyperdriveBlockItem(Block block, Properties properties) {
@@ -114,6 +117,7 @@ public class HyperdriveBlockItem extends BlockItem {
         if (shulkerEntity == null)
             return super.useOn(context);
 
+        shulkerEntity.setVariant(Optional.ofNullable(shulker.getColor()));
         world.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
         world.addFreshEntity(shulkerEntity);
         shulkerEntity.moveTo(pos, 0.0f, 0.0f);
@@ -138,9 +142,30 @@ public class HyperdriveBlockItem extends BlockItem {
             return InteractionResult.FAIL;
 
         giveHyperdriveItemTo(filledStack(), player, heldItem, hand);
-
+        DyeColor color = ((Shulker) entity).getColor();
         Direction direction = ((Shulker) entity).getAttachFace().getOpposite();
-        BlockState state = Blocks.SHULKER_BOX.defaultBlockState().setValue(ShulkerBoxBlock.FACING, direction);
+
+        Block shulkerBlock = switch (color) {
+            case null -> Blocks.SHULKER_BOX;
+            case WHITE -> Blocks.WHITE_SHULKER_BOX;
+            case ORANGE -> Blocks.ORANGE_SHULKER_BOX;
+            case MAGENTA -> Blocks.MAGENTA_SHULKER_BOX;
+            case LIGHT_BLUE -> Blocks.LIGHT_BLUE_SHULKER_BOX;
+            case YELLOW -> Blocks.YELLOW_SHULKER_BOX;
+            case LIME -> Blocks.LIME_SHULKER_BOX;
+            case PINK -> Blocks.PINK_SHULKER_BOX;
+            case GRAY -> Blocks.GRAY_SHULKER_BOX;
+            case LIGHT_GRAY -> Blocks.LIGHT_GRAY_SHULKER_BOX;
+            case CYAN -> Blocks.CYAN_SHULKER_BOX;
+            case PURPLE -> Blocks.PURPLE_SHULKER_BOX;
+            case BLUE -> Blocks.BLUE_SHULKER_BOX;
+            case BROWN -> Blocks.BROWN_SHULKER_BOX;
+            case GREEN -> Blocks.GREEN_SHULKER_BOX;
+            case RED -> Blocks.RED_SHULKER_BOX;
+            case BLACK -> Blocks.BLACK_SHULKER_BOX;
+        };
+
+        BlockState state = shulkerBlock.defaultBlockState().setValue(ShulkerBoxBlock.FACING, direction);
         BlockPos pos = new BlockPos(entity.getBlockX(), entity.getBlockY(), entity.getBlockZ());
         if (world.getBlockState(pos).canBeReplaced()) {
             world.setBlock(pos, state, Block.UPDATE_ALL);
