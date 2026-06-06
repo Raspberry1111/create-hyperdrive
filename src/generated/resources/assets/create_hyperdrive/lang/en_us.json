@@ -1,0 +1,10 @@
+{
+  "block.create_hyperdrive.hyperdrive": "Hyperdrive",
+  "create_hyperdrive.hyperdrive.end": "The End",
+  "create_hyperdrive.hyperdrive.nether": "The Nether",
+  "create_hyperdrive.hyperdrive.overworld": "Overworld",
+  "create_hyperdrive.hyperdrive.target_dimension": "Target Dimension",
+  "item.create_hyperdrive.hyperdrive": "Hyperdrive",
+  "item.create_hyperdrive.hyperdrive_empty": "Empty Hyperdrive",
+  "itemGroup.create_hyperdrive": "Create: Hyperdrive"
+}

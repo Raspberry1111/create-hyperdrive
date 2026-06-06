@@ -26,7 +26,9 @@ public class AllBlocks {
             .transform(CStress.setImpact(16.0))
             .transform(pickaxeOnly())
             .item(HyperdriveBlockItem::withShulker)
-            .transform(customItemModel())
+            .lang($ -> "item." + CreateHyperdrive.MODID + ".hyperdrive", "Hyperdrive")
+
+            .transform(b -> b.model(AssetLookup.itemModel("hyperdrive")).build())
             .register();
 
     public static void register() {

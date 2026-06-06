@@ -6,6 +6,7 @@ import com.github.raspberry1111.create_hyperdrive.AllItems;
 import com.github.raspberry1111.create_hyperdrive.CreateHyperdrive;
 import com.github.raspberry1111.create_hyperdrive.mixin.ShulkerAccessor;
 import net.createmod.catnip.math.VecHelper;
+import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -27,13 +28,14 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
-import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class HyperdriveBlockItem extends BlockItem {
     public HyperdriveBlockItem(Block block, Properties properties) {
         super(block, properties);
@@ -129,8 +131,8 @@ public class HyperdriveBlockItem extends BlockItem {
     }
 
     @Override
-    public @NotNull InteractionResult interactLivingEntity(@NotNull ItemStack heldItem, @NotNull Player player, @NotNull LivingEntity entity,
-                                                           @NotNull InteractionHand hand) {
+    public InteractionResult interactLivingEntity(ItemStack heldItem, Player player, LivingEntity entity,
+                                                  InteractionHand hand) {
         if (hasShulker(heldItem))
             return InteractionResult.PASS;
         if (entity.getType() != EntityType.SHULKER)

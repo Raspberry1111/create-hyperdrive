@@ -51,7 +51,7 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
         direction = blockState.getValue(FACING);
 
         opposite = direction.getOpposite();
-        shaft = instancerProvider().instancer(AllInstanceTypes.ROTATING, Models.partial(com.simibubi.create.AllPartialModels.SHAFT_HALF))
+        shaft = instancerProvider().instancer(AllInstanceTypes.ROTATING, Models.partial(AllPartialModels.TINY_SHAFT))
                 .createInstance();
         shulkerHead = instancerProvider().instancer(InstanceTypes.TRANSFORMED, Models.partial(be.stateMachine.getShulkerHeadModel()))
                 .createInstance();

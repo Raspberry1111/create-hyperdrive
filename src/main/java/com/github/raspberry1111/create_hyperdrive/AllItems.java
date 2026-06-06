@@ -14,6 +14,7 @@ public class AllItems {
                     .model((c, p) ->
                             p.itemTexture(c)
                     )
+                    .lang($ -> "item." + CreateHyperdrive.MODID + ".hyperdrive_empty", "Empty Hyperdrive")
                     .register();
 
     public static void register() {

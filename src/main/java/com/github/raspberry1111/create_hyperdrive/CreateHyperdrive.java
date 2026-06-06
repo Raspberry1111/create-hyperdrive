@@ -1,8 +1,10 @@
 package com.github.raspberry1111.create_hyperdrive;
 
+import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity;
 import com.mojang.logging.LogUtils;
 import com.simibubi.create.compat.Mods;
 import com.simibubi.create.foundation.data.CreateRegistrate;
+import com.tterrag.registrate.providers.ProviderType;
 import dev.egg.registries.BlockEntityRegistry;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.registries.Registries;
@@ -25,6 +27,7 @@ import org.slf4j.Logger;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(CreateHyperdrive.MODID)
@@ -50,6 +53,13 @@ public class CreateHyperdrive {
         AllPartialModels.register();
         AllDataComponents.register(modEventBus);
         AllConfigs.register(modLoadingContext, modContainer);
+
+        REGISTRATE.addDataGenerator(ProviderType.LANG, provider -> {
+            BiConsumer<String, String> langConsumer = provider::add;
+
+            HyperdriveBlockEntity.TargetDimension.provideLang(langConsumer);
+            AllCreativeModeTabs.provideLang(langConsumer);
+        });
 
         BlockEntityRegistry.PublishCompoundPosFixer(MODID, Set.of("hyperdrive"), Set.of("Source"));
 

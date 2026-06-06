@@ -1,5 +1,6 @@
 package com.github.raspberry1111.create_hyperdrive.utility;
 
+import com.github.raspberry1111.create_hyperdrive.CreateHyperdrive;
 import dev.egg.SubLevelWarper;
 import dev.ryanhcode.sable.api.SubLevelHelper;
 import dev.ryanhcode.sable.api.math.LevelReusedVectors;
@@ -70,18 +71,21 @@ public class MathHelper {
         for (SubLevel subLevel : subLevels) {
             final BoundingBox3dc boundingBox = subLevel.boundingBox();
             Vector3d oldCenter = boundingBox.center();
-            Vector3d newCenter = boundingBox.center().mul(scaleRatio, scaleRatio, scaleRatio);
+            Vector3d newCenter = boundingBox.center().mul(scaleRatio, 1, scaleRatio);
 
             final BoundingBox3d transformedBoundingBox = boundingBox.move(newCenter.x - oldCenter.x, newCenter.y - oldCenter.y, newCenter.z - oldCenter.z, new BoundingBox3d());
 
             if (transformedBoundingBox.minY() < targetLevel.getMinBuildHeight()) {
+                CreateHyperdrive.LOGGER.debug("[subLevelChainIntersectsAny] below void");
                 return true;
             }
 
             if (boundingBoxIntersectsBlocks(transformedBoundingBox, targetLevel, allowList)) {
+                CreateHyperdrive.LOGGER.debug("[subLevelChainIntersectsAny] intersecting blocks");
                 return true;
             }
             if (boundingBoxIntersectsSubLevels(transformedBoundingBox, targetLevel)) {
+                CreateHyperdrive.LOGGER.debug("[subLevelChainIntersectsAny] intersecting sublevels");
                 return true;
             }
         }

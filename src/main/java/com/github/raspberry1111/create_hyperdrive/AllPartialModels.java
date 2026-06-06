@@ -9,7 +9,11 @@ public class AllPartialModels {
             SHULKER_HEAD_COOLDOWN = block("hyperdrive/shulker_head/cooldown"),
             SHULKER_HEAD_INFUSED = block("hyperdrive/shulker_head/infused"),
 
-    HYPERDRIVE_LID = block("hyperdrive/lid");
+    HYPERDRIVE_LID = block("hyperdrive/lid"),
+
+    TINY_SHAFT = block("tiny_shaft");
+
+
 
 
     private static PartialModel block(String path) {

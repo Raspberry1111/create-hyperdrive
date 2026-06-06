@@ -8,6 +8,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import java.util.function.BiConsumer;
+
 import static com.github.raspberry1111.create_hyperdrive.CreateHyperdrive.REGISTRATE;
 
 public class AllCreativeModeTabs {
@@ -29,5 +31,9 @@ public class AllCreativeModeTabs {
 
     public static void register(IEventBus modEventBus) {
         REGISTER.register(modEventBus);
+    }
+
+    public static void provideLang(BiConsumer<String, String> consumer) {
+        consumer.accept("itemGroup." + CreateHyperdrive.MODID, "Create: Hyperdrive");
     }
 }

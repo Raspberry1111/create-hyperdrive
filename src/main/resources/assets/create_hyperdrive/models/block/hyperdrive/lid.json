@@ -8,7 +8,8 @@
   ],
   "textures": {
     "5": "create:block/brass_casing",
-    "6": "create_hyperdrive:block/hyperdrive"
+    "6": "create_hyperdrive:block/hyperdrive",
+    "particle": "create_hyperdrive:block/hyperdrive"
   },
   "elements": [
     {

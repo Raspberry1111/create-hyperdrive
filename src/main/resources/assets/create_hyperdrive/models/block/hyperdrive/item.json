@@ -1,0 +1,31 @@
+{
+  "textures": {
+    "layer0": "create_hyperdrive:item/hyperdrive/item_empty"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "create_hyperdrive:shulker_model": 0.25
+      },
+      "model": "create_hyperdrive:item/hyperdrive/item_cooldown"
+    },
+    {
+      "predicate": {
+        "create_hyperdrive:shulker_model": 0.50
+      },
+      "model": "create_hyperdrive:item/hyperdrive/item_exhausted"
+    },
+    {
+      "predicate": {
+        "create_hyperdrive:shulker_model": 0.75
+      },
+      "model": "create_hyperdrive:item/hyperdrive/item_normal"
+    },
+    {
+      "predicate": {
+        "create_hyperdrive:shulker_model": 1.00
+      },
+      "model": "create_hyperdrive:item/hyperdrive/item_infused"
+    }
+  ]
+}

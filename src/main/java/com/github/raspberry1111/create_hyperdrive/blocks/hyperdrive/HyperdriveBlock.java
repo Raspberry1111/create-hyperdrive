@@ -5,6 +5,7 @@ import com.github.raspberry1111.create_hyperdrive.AllBlocks;
 import com.simibubi.create.content.equipment.wrench.IWrenchable;
 import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
 import com.simibubi.create.foundation.block.IBE;
+import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
@@ -30,11 +31,15 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<HyperdriveBlockEntity>, IWrenchable {
     public static final BooleanProperty HAS_SHULKER = BooleanProperty.create("shulker");
 
@@ -44,7 +49,7 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
     }
 
     @Override
-    public @NotNull VoxelShape getShape(@NotNull BlockState state, BlockGetter level, @NotNull BlockPos pos, @NotNull CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         BlockEntity blockentity = level.getBlockEntity(pos);
         return blockentity instanceof HyperdriveBlockEntity ? Shapes.create(((HyperdriveBlockEntity) blockentity).getBoundingBox(state)) : Shapes.block();
     }
@@ -57,7 +62,7 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
 
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         if (!state.getValue(HAS_SHULKER))
             return null;
         return IBE.super.newBlockEntity(pos, state);
@@ -71,7 +76,7 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
         if (!(item instanceof HyperdriveBlockItem))
             return defaultState;
 
-        return super.getStateForPlacement(context)
+        return Objects.requireNonNull(super.getStateForPlacement(context))
                 .setValue(HAS_SHULKER, HyperdriveBlockItem.hasShulker(stack));
     }
 
@@ -97,7 +102,7 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
         return AllBlockEntityTypes.HYPERDRIVE.get();
     }
 
-    protected @NotNull ItemInteractionResult useItemOn(@NotNull ItemStack stack, @NotNull BlockState state, Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hitResult) {
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (!state.getValue(HAS_SHULKER)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }

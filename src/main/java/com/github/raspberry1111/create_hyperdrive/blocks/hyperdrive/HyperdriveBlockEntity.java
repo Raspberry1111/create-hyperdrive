@@ -17,6 +17,7 @@ import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.createmod.catnip.animation.LerpedFloat;
 import net.createmod.catnip.lang.Lang;
 import net.createmod.catnip.math.VecHelper;
+import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -24,6 +25,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.item.ItemStack;
@@ -38,9 +40,14 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiConsumer;
 
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class HyperdriveBlockEntity extends KineticBlockEntity {
     public static final List<ResourceLocation> ALLOW_LIST = List.of(
             ResourceLocation.fromNamespaceAndPath("minecraft", "air")
@@ -49,7 +56,6 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     public LerpedFloat headAnimation;
     protected LerpedFloat headAngle;
     protected ScrollOptionBehaviour<TargetDimension> targetDimensions;
-    private float oldProgress = 0;
 
     public HyperdriveBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -95,8 +101,6 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     @Override
     public void tick() {
         super.tick();
-        oldProgress = stateMachine.currentProgress;
-
 
         if (!shouldTick()) {
             stateMachine.moveTowardsZero();
@@ -156,6 +160,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         if (level == null || level.isClientSide) {
             return;
         }
+        MinecraftServer server = Objects.requireNonNull(level.getServer());
 
         SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
         if (subLevel instanceof ServerSubLevel serverSubLevel) {
@@ -165,10 +170,13 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
                 case OVERWORLD -> Level.OVERWORLD;
             };
 
-            ServerLevel targetLevel = level.getServer().getLevel(target);
+            ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
+            double scale = MathHelper.dimensionScale(serverSubLevel.getLevel(), targetLevel);
+            Vector3d position = serverSubLevel.logicalPose().position().mul(scale, 1.0, scale, new Vector3d());
+
+            CreateHyperdrive.LOGGER.debug("[Hyperdrive::triggerTeleportation] trying to teleport to {} in {}", position, target);
             if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST)) {
-                double scale = MathHelper.dimensionScale(serverSubLevel.getLevel(), targetLevel);
-                Vector3d position = serverSubLevel.logicalPose().position().mul(scale, 1.0, scale, new Vector3d());
+
                 SubLevelWarper.WarpSubLevel(serverSubLevel, targetLevel, position);
             }
         }
@@ -232,17 +240,26 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     }
 
     public enum TargetDimension implements INamedIconOptions {
-        OVERWORLD(AllIcons.I_ROTATE_NEVER_PLACE),
-        NETHER(AllIcons.I_3x3),
-        END(AllIcons.I_ACTIVE),
+        OVERWORLD(AllIcons.I_ROTATE_NEVER_PLACE, "Overworld"),
+        NETHER(AllIcons.I_3x3, "The Nether"),
+        END(AllIcons.I_ACTIVE, "The End"),
         ;
 
         private final String translationKey;
+        private final String translation;
         private final AllIcons icon;
 
-        TargetDimension(AllIcons icon) {
+        TargetDimension(AllIcons icon, String translation) {
             this.icon = icon;
             this.translationKey = CreateHyperdrive.MODID + ".hyperdrive." + Lang.asId(name());
+            this.translation = translation;
+        }
+
+        public static void provideLang(BiConsumer<String, String> consumer) {
+            consumer.accept(CreateHyperdrive.MODID + ".hyperdrive.target_dimension", "Target Dimension");
+            for (TargetDimension dimension : TargetDimension.values()) {
+                consumer.accept(dimension.translationKey, dimension.translation);
+            }
         }
 
         @Override
@@ -265,20 +282,10 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         }
 
         @Override
-        protected Vec3 getSouthLocation() {
-            return VecHelper.voxelSpace(8, 8, 15.5);
-        }
-
-        @Override
         public Vec3 getLocalOffset(LevelAccessor level, BlockPos pos, BlockState state) {
             Direction facing = state.getValue(HyperdriveBlock.FACING);
             return super.getLocalOffset(level, pos, state).add(Vec3.atLowerCornerOf(facing.getNormal())
                     .scale(-4 / 16f));
-        }
-
-        @Override
-        public float getScale() {
-            return super.getScale();
         }
     }
 }
