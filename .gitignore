@@ -45,5 +45,3 @@ Thumbs.db
 # Build artifacts
 *.jar
 *.zip
-
-src/generated/
