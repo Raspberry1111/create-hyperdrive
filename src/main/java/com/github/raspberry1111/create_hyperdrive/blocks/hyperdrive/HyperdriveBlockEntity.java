@@ -1,7 +1,7 @@
 package com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive;
 
-import com.github.raspberry1111.create_hyperdrive.AllBlocks;
 import com.github.raspberry1111.create_hyperdrive.AllDataComponents;
+import com.github.raspberry1111.create_hyperdrive.AllIcons;
 import com.github.raspberry1111.create_hyperdrive.CreateHyperdrive;
 import com.github.raspberry1111.create_hyperdrive.AllConfigs;
 import com.github.raspberry1111.create_hyperdrive.utility.MathHelper;
@@ -10,7 +10,6 @@ import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour
 import com.simibubi.create.foundation.blockEntity.behaviour.CenteredSideValueBoxTransform;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.INamedIconOptions;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollOptionBehaviour;
-import com.simibubi.create.foundation.gui.AllIcons;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
@@ -222,7 +221,6 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             }
         }
 
-
         stateMachine.currentProgress = compound.getInt("current_progress");
         super.read(compound, registries, clientPacket);
     }
@@ -242,9 +240,9 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     }
 
     public enum TargetDimension implements INamedIconOptions {
-        OVERWORLD(AllIcons.I_ROTATE_NEVER_PLACE, "Overworld"),
-        NETHER(AllIcons.I_3x3, "The Nether"),
-        END(AllIcons.I_ACTIVE, "The End"),
+        OVERWORLD(AllIcons.I_OVERWORLD_ISLANDS, "Overworld"),
+        NETHER(AllIcons.I_NETHER_PORTAL, "The Nether"),
+        END(AllIcons.I_END_PEARL, "The End"),
         ;
 
         private final String translationKey;
