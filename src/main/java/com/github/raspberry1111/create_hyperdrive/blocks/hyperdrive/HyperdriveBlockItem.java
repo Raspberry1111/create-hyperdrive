@@ -198,6 +198,8 @@ public class HyperdriveBlockItem extends BlockItem {
             return;
         }
 
+        
+
         BlockPos soundPos = BlockPos.containing(vec);
 //        world.playSound(null, soundPos, SoundEvents.BLAZE_HURT, SoundSource.HOSTILE, .25f, .75f);
 //        world.playSound(null, soundPos, SoundEvents.FIRE_EXTINGUISH, SoundSource.HOSTILE, .5f, .75f);

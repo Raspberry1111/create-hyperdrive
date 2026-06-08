@@ -79,7 +79,6 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
                     default -> 0;
                 })
                 .setChanged();
-//                .rotateXDegrees(180).setChanged();
 
         baseHeadTransform.set(shulkerHead.pose);
         baseLidTransform.set(lid.pose);

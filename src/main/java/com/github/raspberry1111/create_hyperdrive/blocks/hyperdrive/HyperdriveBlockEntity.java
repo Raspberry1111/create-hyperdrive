@@ -50,7 +50,9 @@ import java.util.function.BiConsumer;
 @MethodsReturnNonnullByDefault
 public class HyperdriveBlockEntity extends KineticBlockEntity {
     public static final List<ResourceLocation> ALLOW_LIST = List.of(
-            ResourceLocation.fromNamespaceAndPath("minecraft", "air")
+            ResourceLocation.fromNamespaceAndPath("minecraft", "air"),
+            ResourceLocation.fromNamespaceAndPath("minecraft", "void_air"),
+            ResourceLocation.fromNamespaceAndPath("minecraft", "cave_air")
     );
     final HyperdriveStateMachine stateMachine;
     public LerpedFloat headAnimation;

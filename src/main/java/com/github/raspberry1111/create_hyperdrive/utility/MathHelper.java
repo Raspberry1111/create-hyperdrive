@@ -112,6 +112,7 @@ public class MathHelper {
 
             ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
             if (!allowList.contains(id)) {
+                CreateHyperdrive.LOGGER.debug("[boundingBoxIntersectsBlocks] intersecting {}", id);
                 return true;
             }
         }
