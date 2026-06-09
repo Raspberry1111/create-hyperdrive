@@ -18,7 +18,8 @@ public class HyperdriveStateMachine {
 
     public Phase phase = Phase.CHARGING;
     public ShulkerStatus shulkerStatus = ShulkerStatus.NORMAL;
-    int currentProgress = 0;
+    int previousProgress = Integer.MIN_VALUE;
+    private int currentProgress = 0;
 
     HyperdriveStateMachine(Supplier<Float> speedSupplier, Runnable onTrigger) {
         this.speedSupplier = speedSupplier;
@@ -33,6 +34,15 @@ public class HyperdriveStateMachine {
         return AllConfigs.server().cooldownTicks.get();
     }
 
+    public int getCurrentProgress() {
+        return currentProgress;
+    }
+
+    void setCurrentProgress(int value) {
+        previousProgress = currentProgress;
+        currentProgress = value;
+    }
+
     public void tick() {
         switch (phase) {
             case CHARGING -> tickCharging();
@@ -45,25 +55,27 @@ public class HyperdriveStateMachine {
     public void lazyTick() {
         if (phase == Phase.COOLDOWN) {
             tickCooldown();
+
+
         }
     }
 
     public void moveTowardsZero() {
         if (Math.abs(currentProgress) < 8) {
-            currentProgress = 0;
+            setCurrentProgress(0);
         } else if (currentProgress < 0) {
-            currentProgress += 16;
+            setCurrentProgress(currentProgress + 16);
         } else {
-            currentProgress -= 16;
+            setCurrentProgress(currentProgress - 16);
         }
     }
 
     private void tickCharging() {
         int work = (int) Math.round(speedSupplier.get() * shulkerStatus.chargeSpeedMultiplier());
-        currentProgress += work;
+        setCurrentProgress(currentProgress + work);
 
         if (Math.abs(currentProgress) >= targetChargeProgress()) {
-            currentProgress = 0;
+            setCurrentProgress(0);
             phase = Phase.ACTIVE;
 
             shulkerStatus = ShulkerStatus.NORMAL;
@@ -71,10 +83,10 @@ public class HyperdriveStateMachine {
     }
 
     private void tickActive() {
-        currentProgress += 1;
+        setCurrentProgress(currentProgress + 1);
 
         if (currentProgress >= ACTIVE_TICKS) {
-            currentProgress = 0;
+            setCurrentProgress(0);
             phase = Phase.COOLDOWN;
 
             onTrigger.run(); // this needs to run after we change the phase or whenever sable teleports the contraption it will trigger again
@@ -82,7 +94,7 @@ public class HyperdriveStateMachine {
     }
 
     private void tickCooldown() {
-        currentProgress += LAZY_TICK_RATE;
+        setCurrentProgress(currentProgress + LAZY_TICK_RATE);
 
         if (currentProgress >= targetCooldownProgress()) {
             endCooldown();
@@ -90,7 +102,7 @@ public class HyperdriveStateMachine {
     }
 
     private void endCooldown() {
-        currentProgress = 0;
+        setCurrentProgress(0);
         phase = Phase.CHARGING;
     }
 

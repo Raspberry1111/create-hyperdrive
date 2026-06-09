@@ -195,14 +195,7 @@ public class HyperdriveBlockItem extends BlockItem {
                 Vec3 motion = VecHelper.offsetRandomly(Vec3.ZERO, world.random, .125f);
                 world.addParticle(ParticleTypes.END_ROD, vec.x, vec.y, vec.z, motion.x * 2, motion.y, motion.z * 2);
             }
-            return;
         }
-
-        
-
-        BlockPos soundPos = BlockPos.containing(vec);
-//        world.playSound(null, soundPos, SoundEvents.BLAZE_HURT, SoundSource.HOSTILE, .25f, .75f);
-//        world.playSound(null, soundPos, SoundEvents.FIRE_EXTINGUISH, SoundSource.HOSTILE, .5f, .75f);
     }
 
     @Override
@@ -227,7 +220,7 @@ public class HyperdriveBlockItem extends BlockItem {
             // there was a shulker_status component on the item stack (see HyperdriveBlock.newBlockEntity)
             be.stateMachine.phase = phase;
             be.stateMachine.shulkerStatus = shulkerStatus; // default is NORMAL because if the block entity was placed, it cant be empty
-            be.stateMachine.currentProgress = currentProgress;
+            be.stateMachine.setCurrentProgress(currentProgress);
         }
 
         return InteractionResult.sidedSuccess(level.isClientSide);

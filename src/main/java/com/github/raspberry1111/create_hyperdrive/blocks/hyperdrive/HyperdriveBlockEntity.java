@@ -15,35 +15,39 @@ import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.createmod.catnip.animation.LerpedFloat;
 import net.createmod.catnip.lang.Lang;
-import net.createmod.catnip.math.VecHelper;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Position;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import dev.egg.SubLevelWarper;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Vector3d;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+
+import com.simibubi.create.foundation.sound.SoundScapes;
 
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
@@ -56,7 +60,8 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     final HyperdriveStateMachine stateMachine;
     public LerpedFloat headAnimation;
     protected LerpedFloat headAngle;
-    protected ScrollOptionBehaviour<TargetDimension> targetDimensions;
+    protected ScrollOptionBehaviour<TargetDimension> targetDimension;
+
 
     public HyperdriveBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -68,7 +73,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     public float getOpenProgress(float progress, float partialTick) {
         var partialWork = partialTick * (float) stateMachine.shulkerStatus.chargeSpeedMultiplier();
 
-        if (!shouldTick()) {
+        if (partialTick == 0 || !shouldTick()) {
             partialWork = 0;
         }
 
@@ -83,7 +88,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
     public boolean shouldTick() {
         if (stateMachine.phase == HyperdriveStateMachine.Phase.CHARGING) {
-            return isSpeedRequirementFulfilled() && SableCompanion.INSTANCE.getContaining(this) != null;
+            return isSpeedRequirementFulfilled() && SableCompanion.INSTANCE.getContaining(this) != null && !isTargetDimensionCurrent();
         } else {
             return true;
         }
@@ -93,15 +98,19 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
         super.addBehaviours(behaviours);
 
-        targetDimensions = new ScrollOptionBehaviour<>(TargetDimension.class,
+        targetDimension = new ScrollOptionBehaviour<>(TargetDimension.class,
                 Component.translatable(CreateHyperdrive.MODID + ".hyperdrive.target_dimension"), this, new TargetDimensionValueBox());
-        targetDimensions.value = 0;
-        behaviours.add(targetDimensions);
+        targetDimension.value = 0;
+        behaviours.add(targetDimension);
     }
 
     @Override
     public void tick() {
         super.tick();
+
+        if (level != null && level.isClientSide()) {
+            tickAudio();
+        }
 
         if (!shouldTick()) {
             stateMachine.moveTowardsZero();
@@ -109,52 +118,39 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         }
 
         stateMachine.tick();
-
-        if (stateMachine.phase == HyperdriveStateMachine.Phase.CHARGING) {
-            pushEntities();
-        }
-
     }
 
-    private void pushEntities() {
-        if (level == null) {
+    @Override
+    @OnlyIn(Dist.CLIENT)
+    public void tickAudio() {
+        if (stateMachine.phase != HyperdriveStateMachine.Phase.CHARGING) {
+            return;
         }
-//
-//        BlockState state = getBlockState();
-//        Direction direction = getBlockState().getValue(HyperdriveBlock.FACING);
-//        Vec3 worldPosition = SableCompanion.INSTANCE.projectOutOfSubLevel(getLevel(), (Position) getBlockPos().getBottomCenter());
-//        AABB aabb = Shulker.getProgressDeltaAabb(1.0F, direction, getOpenProgress(oldProgress, 0), getOpenProgress(stateMachine.currentProgress, 0)).move(worldPosition);
-//
-//        CreateHyperdrive.LOGGER.debug("pushEntities position {}", getBlockPos());
-//        List<Entity> list = level.getEntities(null, aabb);
-//        if (!list.isEmpty()) {
-//            for (Entity entity : list) {
-//                if (entity.getPistonPushReaction() != PushReaction.IGNORE) {
-//
-//                    AABB entityAABB = entity.getBoundingBox();
-//
-//                    double overlapX = Math.min(aabb.maxX, entityAABB.maxX) - Math.max(aabb.minX, entityAABB.minX);
-//                    double overlapY = Math.min(aabb.maxY, entityAABB.maxY) - Math.max(aabb.minY, entityAABB.minY);
-//                    double overlapZ = Math.min(aabb.maxZ, entityAABB.maxZ) - Math.max(aabb.minZ, entityAABB.minZ);
-//
-//                    CreateHyperdrive.LOGGER.debug("overlap: ( {} {} ) ( {} {} ) | {} {} {}", aabb.minY, aabb.maxY, entityAABB.minY, entityAABB.maxY, overlapX, overlapY, overlapZ);
-//                    entity.move(
-//                            MoverType.SHULKER_BOX,
-//                            new Vec3(
-//                                    overlapX * direction.getStepX(),
-//                                    overlapY * direction.getStepY(),
-//                                    overlapZ * direction.getStepZ()
-//                            )
-//                    );
-//                }
-//            }
-//        }
+        if (stateMachine.getCurrentProgress() == 0) {
+            return;
+        }
+
+        SoundScapes.play(SoundScapes.AmbienceGroup.COG, BlockPos.containing(SableCompanion.INSTANCE.projectOutOfSubLevel(level, (Position) getBlockPos().getCenter())), 1f);
     }
+
 
     @Override
     public void lazyTick() {
         super.lazyTick();
         stateMachine.lazyTick();
+    }
+
+    private boolean isTargetDimensionCurrent() {
+        if (level == null) {
+            return false;
+        }
+
+        ResourceKey<Level> targetID = switch (targetDimension.get()) {
+            case NETHER -> Level.NETHER;
+            case END -> Level.END;
+            case OVERWORLD -> Level.OVERWORLD;
+        };
+        return targetID == level.dimension();
     }
 
     private void triggerTeleportation() {
@@ -165,7 +161,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
         SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
         if (subLevel instanceof ServerSubLevel serverSubLevel) {
-            ResourceKey<Level> target = switch (targetDimensions.get()) {
+            ResourceKey<Level> target = switch (targetDimension.get()) {
                 case NETHER -> Level.NETHER;
                 case END -> Level.END;
                 case OVERWORLD -> Level.OVERWORLD;
@@ -173,12 +169,18 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
             ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
             double scale = MathHelper.dimensionScale(serverSubLevel.getLevel(), targetLevel);
-            Vector3d position = serverSubLevel.logicalPose().position().mul(scale, 1.0, scale, new Vector3d());
+            Vector3d newSublevelPosition = serverSubLevel.logicalPose().position().mul(scale, 1.0, scale, new Vector3d());
 
-            CreateHyperdrive.LOGGER.debug("[Hyperdrive::triggerTeleportation] trying to teleport to {} in {}", position, target);
+            Vec3 hyperdrivePosition = SableCompanion.INSTANCE.projectOutOfSubLevel(level, (Position) getBlockPos().getCenter());
+            Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
+
+            CreateHyperdrive.LOGGER.debug("[Hyperdrive::triggerTeleportation] trying to teleport to {} in {}", newSublevelPosition, target);
             if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST)) {
-
-                SubLevelWarper.WarpSubLevel(serverSubLevel, targetLevel, position);
+                level.playSound(null, BlockPos.containing(hyperdrivePosition), SoundEvents.END_PORTAL_SPAWN, SoundSource.MASTER, 3f, 0.5f);
+                SubLevelWarper.WarpSubLevel(serverSubLevel, targetLevel, newSublevelPosition);
+                targetLevel.playSound(null, BlockPos.containing(newHyperdrivePosition), SoundEvents.END_PORTAL_SPAWN, SoundSource.MASTER, 3f, 0.5f);
+            } else {
+                level.playSound(null, BlockPos.containing(hyperdrivePosition), SoundEvents.END_PORTAL_SPAWN, SoundSource.MASTER, 1f, 0.5f);
             }
         }
     }
@@ -200,7 +202,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     public void write(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
         compound.putString("phase", stateMachine.phase.toString());
         compound.putString("shulker_status", stateMachine.shulkerStatus.toString());
-        compound.putInt("current_progress", stateMachine.currentProgress);
+        compound.putInt("current_progress", stateMachine.getCurrentProgress());
 
         super.write(compound, registries, clientPacket);
     }
@@ -221,12 +223,13 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             }
         }
 
-        stateMachine.currentProgress = compound.getInt("current_progress");
+        stateMachine.setCurrentProgress(compound.getInt("current_progress"));
+
         super.read(compound, registries, clientPacket);
     }
 
     public AABB getBoundingBox(BlockState state) {
-        return Shulker.getProgressAabb(1.0F, state.getValue(HyperdriveBlock.FACING), Math.abs(getOpenProgress(stateMachine.currentProgress, 0)));
+        return Shulker.getProgressAabb(1.0F, state.getValue(HyperdriveBlock.FACING), Math.abs(getOpenProgress(stateMachine.getCurrentProgress(), 0)));
     }
 
     public ItemStack getItemStackWithData() {
@@ -234,7 +237,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
         stack.set(AllDataComponents.PHASE, stateMachine.phase);
         stack.set(AllDataComponents.SHULKER_STATUS, stateMachine.shulkerStatus);
-        stack.set(AllDataComponents.CURRENT_PROGRESS, stateMachine.currentProgress);
+        stack.set(AllDataComponents.CURRENT_PROGRESS, stateMachine.getCurrentProgress());
 
         return stack;
     }

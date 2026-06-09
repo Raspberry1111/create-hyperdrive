@@ -12,6 +12,4 @@ public class HyperdriveRenderer extends SafeBlockEntityRenderer<HyperdriveBlockE
     @Override
     protected void renderSafe(HyperdriveBlockEntity be, float partialTicks, PoseStack ms, MultiBufferSource bufferSource, int light, int overlay) {
     }
-
-
 }

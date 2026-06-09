@@ -115,7 +115,7 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
 
     @Override
     public void beginFrame(DynamicVisual.Context ctx) {
-        float openProgress = be.getOpenProgress(be.stateMachine.currentProgress, ctx.partialTick());
+        float openProgress = be.getOpenProgress(be.stateMachine.getCurrentProgress(), ctx.partialTick());
         animateLid(openProgress, ctx.partialTick());
         animateHead(openProgress, ctx.partialTick());
     }
