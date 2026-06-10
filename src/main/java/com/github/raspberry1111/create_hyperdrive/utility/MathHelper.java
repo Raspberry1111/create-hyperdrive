@@ -20,6 +20,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.border.WorldBorder;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
@@ -77,16 +78,22 @@ public class MathHelper {
             final BoundingBox3d transformedBoundingBox = boundingBox.move(newCenter.x - oldCenter.x, newCenter.y - oldCenter.y, newCenter.z - oldCenter.z, new BoundingBox3d());
 
             if (transformedBoundingBox.minY() < targetLevel.getMinBuildHeight()) {
-                CreateHyperdrive.LOGGER.debug("[subLevelChainIntersectsAny] below void");
+                CreateHyperdrive.LOGGER.info("[subLevelChainIntersectsAny] below void");
+                return true;
+            }
+
+            WorldBorder worldBorder = targetLevel.getWorldBorder();
+            if (worldBorder.isWithinBounds(transformedBoundingBox.toMojang())) {
+                CreateHyperdrive.LOGGER.info("[subLevelChainIntersectsAny] not inside world border");
                 return true;
             }
 
             if (boundingBoxIntersectsBlocks(transformedBoundingBox, targetLevel, allowList)) {
-                CreateHyperdrive.LOGGER.debug("[subLevelChainIntersectsAny] intersecting blocks");
+                CreateHyperdrive.LOGGER.info("[subLevelChainIntersectsAny] intersecting blocks");
                 return true;
             }
             if (boundingBoxIntersectsSubLevels(transformedBoundingBox, targetLevel)) {
-                CreateHyperdrive.LOGGER.debug("[subLevelChainIntersectsAny] intersecting sublevels");
+                CreateHyperdrive.LOGGER.info("[subLevelChainIntersectsAny] intersecting sublevels");
                 return true;
             }
         }
