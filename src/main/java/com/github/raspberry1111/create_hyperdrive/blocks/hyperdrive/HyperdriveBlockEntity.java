@@ -124,7 +124,6 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
     }
 
-    // Called when the chunk is first sent to the client
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
@@ -132,13 +131,6 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         return tag;
     }
 
-    // Creates the update packet sent to nearby clients
-    @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    // Called on the client when the packet arrives
     @Override
     public void onDataPacket(Connection connection, ClientboundBlockEntityDataPacket packet,
                              HolderLookup.Provider registries) {
@@ -147,7 +139,6 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         shouldTick = tag.getBoolean("shouldTick");
     }
 
-    // Call this on the server to push the update to all watching clients
     public void sync() {
         if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), HyperdriveBlock.UPDATE_CLIENTS);
