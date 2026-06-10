@@ -1,9 +1,6 @@
 package com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive;
 
-import com.github.raspberry1111.create_hyperdrive.AllDataComponents;
-import com.github.raspberry1111.create_hyperdrive.AllIcons;
-import com.github.raspberry1111.create_hyperdrive.CreateHyperdrive;
-import com.github.raspberry1111.create_hyperdrive.AllConfigs;
+import com.github.raspberry1111.create_hyperdrive.*;
 import com.github.raspberry1111.create_hyperdrive.utility.MathHelper;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
@@ -176,11 +173,11 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
             CreateHyperdrive.LOGGER.debug("[Hyperdrive::triggerTeleportation] trying to teleport to {} in {}", newSublevelPosition, target);
             if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST)) {
-                level.playSound(null, BlockPos.containing(hyperdrivePosition), SoundEvents.END_PORTAL_SPAWN, SoundSource.MASTER, 3f, 0.5f);
+                level.playSound(null, BlockPos.containing(hyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
                 SubLevelWarper.WarpSubLevel(serverSubLevel, targetLevel, newSublevelPosition);
-                targetLevel.playSound(null, BlockPos.containing(newHyperdrivePosition), SoundEvents.END_PORTAL_SPAWN, SoundSource.MASTER, 3f, 0.5f);
+                targetLevel.playSound(null, BlockPos.containing(newHyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
             } else {
-                level.playSound(null, BlockPos.containing(hyperdrivePosition), SoundEvents.END_PORTAL_SPAWN, SoundSource.MASTER, 1f, 0.5f);
+                level.playSound(null, BlockPos.containing(hyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_FAILED.get(), SoundSource.MASTER, 1.5f, 1f);
             }
         }
     }
@@ -224,7 +221,6 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         }
 
         stateMachine.setCurrentProgress(compound.getInt("current_progress"));
-
         super.read(compound, registries, clientPacket);
     }
 

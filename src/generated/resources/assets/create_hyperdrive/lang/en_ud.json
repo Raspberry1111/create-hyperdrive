@@ -6,5 +6,7 @@
   "create_hyperdrive.hyperdrive.target_dimension": "uoısuǝɯıᗡ ʇǝbɹɐ⟘",
   "item.create_hyperdrive.hyperdrive": "ǝʌıɹpɹǝdʎH",
   "item.create_hyperdrive.hyperdrive_empty": "ǝʌıɹpɹǝdʎH ʎʇdɯƎ",
-  "itemGroup.create_hyperdrive": "ǝʌıɹpɹǝdʎH :ǝʇɐǝɹƆ"
+  "itemGroup.create_hyperdrive": "ǝʌıɹpɹǝdʎH :ǝʇɐǝɹƆ",
+  "subtitle.create_hyperdrive.hyperdrive_activate_failed": "pǝןıɐℲ ǝʌıɹpɹǝdʎH",
+  "subtitle.create_hyperdrive.hyperdrive_activate_succeeded": "pǝpǝǝɔɔnS ǝʌıɹpɹǝdʎH"
 }

@@ -1,0 +1,20 @@
+{
+  "hyperdrive_activate_succeeded": {
+    "sounds": [
+      {
+        "name": "minecraft:block.end_portal.spawn",
+        "type": "event"
+      }
+    ],
+    "subtitle": "subtitle.create_hyperdrive.hyperdrive_activate_succeeded"
+  },
+  "hyperdrive_activate_failed": {
+    "sounds": [
+      {
+        "name": "minecraft:block.vault.insert_item_fail",
+        "type": "event"
+      }
+    ],
+    "subtitle": "subtitle.create_hyperdrive.hyperdrive_activate_failed"
+  }
+}

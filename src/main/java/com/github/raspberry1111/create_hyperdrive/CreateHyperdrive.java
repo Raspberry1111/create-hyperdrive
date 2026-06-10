@@ -53,12 +53,14 @@ public class CreateHyperdrive {
         AllPartialModels.register();
         AllDataComponents.register(modEventBus);
         AllConfigs.register(modLoadingContext, modContainer);
+        AllSounds.register(modEventBus);
 
         REGISTRATE.addDataGenerator(ProviderType.LANG, provider -> {
             BiConsumer<String, String> langConsumer = provider::add;
 
             HyperdriveBlockEntity.TargetDimension.provideLang(langConsumer);
             AllCreativeModeTabs.provideLang(langConsumer);
+            AllSounds.provideLang(langConsumer);
         });
 
         BlockEntityRegistry.PublishCompoundPosFixer(MODID, Set.of("hyperdrive"), Set.of("Source"));

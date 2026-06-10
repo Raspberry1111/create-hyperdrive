@@ -6,5 +6,7 @@
   "create_hyperdrive.hyperdrive.target_dimension": "Target Dimension",
   "item.create_hyperdrive.hyperdrive": "Hyperdrive",
   "item.create_hyperdrive.hyperdrive_empty": "Empty Hyperdrive",
-  "itemGroup.create_hyperdrive": "Create: Hyperdrive"
+  "itemGroup.create_hyperdrive": "Create: Hyperdrive",
+  "subtitle.create_hyperdrive.hyperdrive_activate_failed": "Hyperdrive Failed",
+  "subtitle.create_hyperdrive.hyperdrive_activate_succeeded": "Hyperdrive Succeeded"
 }
