@@ -18,7 +18,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Position;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -55,9 +57,8 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             ResourceLocation.fromNamespaceAndPath("minecraft", "cave_air")
     );
     final HyperdriveStateMachine stateMachine;
-    public LerpedFloat headAnimation;
-    protected LerpedFloat headAngle;
     protected ScrollOptionBehaviour<TargetDimension> targetDimension;
+    private boolean shouldTick = false;
 
 
     public HyperdriveBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
@@ -83,11 +84,74 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         return Math.clamp(openProgress, -1, 1);
     }
 
-    public boolean shouldTick() {
+    public boolean serverShouldTick() {
         if (stateMachine.phase == HyperdriveStateMachine.Phase.CHARGING) {
-            return isSpeedRequirementFulfilled() && SableCompanion.INSTANCE.getContaining(this) != null && !isTargetDimensionCurrent();
+            if (isSpeedRequirementFulfilled() && SableCompanion.INSTANCE.getContaining(this) != null && !isTargetDimensionCurrent()) {
+                if (AllConfigs.server().continousChecking.get()) {
+                    MinecraftServer server = Objects.requireNonNull(level.getServer());
+                    ServerSubLevel subLevel = (ServerSubLevel) SableCompanion.INSTANCE.getContaining(this);
+
+                    ResourceKey<Level> target = switch (targetDimension.get()) {
+                        case NETHER -> Level.NETHER;
+                        case END -> Level.END;
+                        case OVERWORLD -> Level.OVERWORLD;
+                    };
+
+                    ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
+                    return !MathHelper.subLevelChainIntersectsAny(subLevel, targetLevel, ALLOW_LIST);
+                } else {
+                    return true;
+                }
+            } else {
+                return false;
+            }
         } else {
             return true;
+        }
+    }
+
+    public boolean shouldTick() {
+        if (level == null || level.isClientSide()) {
+            return shouldTick;
+        } else {
+            boolean newShouldTick = serverShouldTick();
+            if (newShouldTick != shouldTick) {
+                shouldTick = newShouldTick;
+                sync();
+            }
+            return shouldTick;
+        }
+
+    }
+
+    // Called when the chunk is first sent to the client
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        tag.putBoolean("shouldTick", shouldTick);
+        return tag;
+    }
+
+    // Creates the update packet sent to nearby clients
+    @Override
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // Called on the client when the packet arrives
+    @Override
+    public void onDataPacket(Connection connection, ClientboundBlockEntityDataPacket packet,
+                             HolderLookup.Provider registries) {
+        super.onDataPacket(connection, packet, registries);
+        CompoundTag tag = packet.getTag();
+        shouldTick = tag.getBoolean("shouldTick");
+    }
+
+    // Call this on the server to push the update to all watching clients
+    public void sync() {
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), HyperdriveBlock.UPDATE_CLIENTS);
+            setChanged();
         }
     }
 
@@ -236,6 +300,12 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         stack.set(AllDataComponents.CURRENT_PROGRESS, stateMachine.getCurrentProgress());
 
         return stack;
+    }
+
+    public boolean infuse() {
+        boolean value = stateMachine.infuse();
+        shouldTick();
+        return value;
     }
 
     public enum TargetDimension implements INamedIconOptions {

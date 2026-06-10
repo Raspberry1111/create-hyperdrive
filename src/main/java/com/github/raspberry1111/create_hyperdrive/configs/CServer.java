@@ -10,6 +10,8 @@ public class CServer extends ConfigBase {
     public final ConfigGroup server = group(0, "hyperdrive",
             Comments.server);
 
+    public final ConfigBool continousChecking = b(true, "continous checking", Comments.continousChecking);
+
     public final ConfigInt chargeTicks = i(50, "charge ticks",
             Comments.chargeTicks);
 
@@ -33,5 +35,6 @@ public class CServer extends ConfigBase {
         static String cooldownTicks = "The number of ticks it takes for the hyperdrive to be ready to use again after triggering";
         static String exhaustionMultiplier = "Changes how long the shulker takes to charge when exhausted. 0.5 means that the charge time is doubled when the shulker is exhausted";
         static String infusionMultiplier = "Changes how long the shulker takes to charge when infused. 2.0 means that the charge time is halved when the shulker is infused";
+        static String continousChecking = "Continuously check if the hyperdrive can teleport and stop charging if it cannot";
     }
 }

@@ -111,8 +111,11 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
         if (!(blockEntity instanceof HyperdriveBlockEntity hyperdrive))
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
+        if (level.isClientSide())
+            return ItemInteractionResult.SUCCESS;
+
         if (stack.getItem() == Items.DRAGON_BREATH && stack.getCount() >= 1) {
-            if (hyperdrive.stateMachine.infuse()) {
+            if (hyperdrive.infuse()) {
                 if (!player.isCreative())
                     stack.shrink(1);
 
