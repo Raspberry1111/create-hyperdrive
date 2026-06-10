@@ -83,7 +83,7 @@ public class MathHelper {
             }
 
             WorldBorder worldBorder = targetLevel.getWorldBorder();
-            if (worldBorder.isWithinBounds(transformedBoundingBox.toMojang())) {
+            if (!worldBorder.isWithinBounds(transformedBoundingBox.toMojang())) {
                 CreateHyperdrive.LOGGER.info("[subLevelChainIntersectsAny] not inside world border");
                 return true;
             }
