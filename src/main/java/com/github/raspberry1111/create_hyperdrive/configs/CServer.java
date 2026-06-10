@@ -5,6 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Map;
 
 public class CServer extends ConfigBase {
     public final ConfigGroup server = group(0, "hyperdrive",
@@ -17,11 +18,12 @@ public class CServer extends ConfigBase {
 
     public final ConfigInt cooldownTicks = i(20 * 60 * 3, "cooldown ticks",
             Comments.cooldownTicks);
-    public final ConfigFloat exhaustionMultiplier = f(0.5f, 0.0f, 1.0f, "exhaustion multiplier", Comments.exhaustionMultiplier);
-    public final ConfigFloat infusionMultiplier = f(2.0f, 1.0f, "infusion multiplier", Comments.infusionMultiplier);
+    public final ConfigFloat exhaustionMultiplier = f(0.5f, 0.0f, 5.0f, "exhaustion multiplier", Comments.exhaustionMultiplier);
+    public final ConfigFloat infusionMultiplier = f(2.0f, 0.0f, "infusion multiplier", Comments.infusionMultiplier);
     public final ConfigInt minimumRPM = i(32, 1, 256, "minimum rpm", "The minimum rpm required for the hyperdrive to charge");
 
     public final CStress stressValues = nested(0, CStress::new, Comments.stress);
+    public final ConfigFloat failedTeleportMultiplier = f(0.25f, 0.0f, 5.0f, "failed teleport multiplier", Comments.failedTeleportMultiplier);
 
     @Override
     public @NotNull String getName() {
@@ -36,5 +38,6 @@ public class CServer extends ConfigBase {
         static String exhaustionMultiplier = "Changes how long the shulker takes to charge when exhausted. 0.5 means that the charge time is doubled when the shulker is exhausted";
         static String infusionMultiplier = "Changes how long the shulker takes to charge when infused. 2.0 means that the charge time is halved when the shulker is infused";
         static String continousChecking = "Continuously check if the hyperdrive can teleport and stop charging if it cannot";
+        static String failedTeleportMultiplier = "How much to multiplier the cooldown by if the previous teleport failed";
     }
 }

@@ -2,8 +2,9 @@ package com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive;
 
 import com.github.raspberry1111.create_hyperdrive.AllConfigs;
 import com.github.raspberry1111.create_hyperdrive.AllPartialModels;
-import com.github.raspberry1111.create_hyperdrive.CreateHyperdrive;
 import com.github.raspberry1111.create_hyperdrive.utility.MathHelper;
+import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.Phase;
+import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.ShulkerStatus;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntityVisual;
 import com.simibubi.create.content.kinetics.base.RotatingInstance;
 import com.simibubi.create.foundation.render.AllInstanceTypes;
@@ -21,7 +22,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Position;
-import net.minecraft.util.Mth;
 import dev.engine_room.flywheel.api.instance.Instance;
 import dev.engine_room.flywheel.lib.visual.SimpleTickableVisual;
 import net.minecraft.world.phys.Vec3;
@@ -30,6 +30,7 @@ import org.joml.*;
 import static net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING;
 
 import java.lang.Math;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEntity> implements SimpleDynamicVisual, SimpleTickableVisual {
@@ -39,7 +40,6 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
     private final RotatingInstance shaft;
     private final TransformedInstance shulkerHead;
     private final TransformedInstance lid;
-    private final Direction direction;
     private final Direction opposite;
     private final LerpedFloat headAngle = LerpedFloat.angular();
     HyperdriveBlockEntity be;
@@ -48,12 +48,14 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
         super(context, blockEntity, partialTick);
 
         be = blockEntity;
-        direction = blockState.getValue(FACING);
+        Direction direction = blockState.getValue(FACING);
 
         opposite = direction.getOpposite();
         shaft = instancerProvider().instancer(AllInstanceTypes.ROTATING, Models.partial(AllPartialModels.TINY_SHAFT))
                 .createInstance();
-        shulkerHead = instancerProvider().instancer(InstanceTypes.TRANSFORMED, Models.partial(be.stateMachine.getShulkerHeadModel()))
+        shulkerHead = instancerProvider().instancer(InstanceTypes.TRANSFORMED, Models.partial(
+                        Objects.requireNonNullElse(be.getShulkerHeadModel(), AllPartialModels.SHULKER_HEAD_NORMAL)
+                ))
                 .createInstance();
 
         lid = instancerProvider().instancer(InstanceTypes.TRANSFORMED, Models.partial(AllPartialModels.HYPERDRIVE_LID)).createInstance();
@@ -115,7 +117,7 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
 
     @Override
     public void beginFrame(DynamicVisual.Context ctx) {
-        float openProgress = be.getOpenProgress(be.stateMachine.getCurrentProgress(), ctx.partialTick());
+        float openProgress = be.getOpenProgress(be.getCurrentProgress(), ctx.partialTick());
         animateLid(openProgress, ctx.partialTick());
         animateHead(openProgress, ctx.partialTick());
     }
@@ -177,7 +179,7 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
     private void animateLid(float openProgress, float partialTick) {
         lid.setTransform(baseLidTransform);
 
-        if (be.stateMachine.phase != HyperdriveStateMachine.Phase.ACTIVE) {
+        if (!(be.getPhase() instanceof HyperdriveBlockEntity.HyperdriveStateMachine.Phase.Active)) {
             lid.rotateY((float) Math.PI * 2 * AllConfigs.client().rotations.get() * openProgress);
         }
 
@@ -188,15 +190,30 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
                 .setChanged();
     }
 
+    public boolean shouldHeadMoveSlow() {
+        return switch (be.getPhase()) {
+            case Phase.Cooldown ignored -> true;
+            case Phase.Charging(ShulkerStatus shulkerStatus) when shulkerStatus == ShulkerStatus.EXHAUSTED -> true;
+            default -> false;
+        };
+    }
+
+    public boolean shouldHeadMoveFast() {
+        return switch (be.getPhase()) {
+            case Phase.Charging(ShulkerStatus shulkerStatus) when shulkerStatus == ShulkerStatus.INFUSED -> true;
+            default -> false;
+        };
+    }
+
     public void rotateTowards(float deg, float partialTick) {
         float speed = 0.1f;
         float maxSpeed = 2f;
         float randomNoise = 0;
 
-        if (be.stateMachine.shouldMoveSlow()) {
+        if (shouldHeadMoveSlow()) {
             speed = 0.05f;
             maxSpeed = 1f;
-        } else if (be.stateMachine.shouldMoveFast()) {
+        } else if (shouldHeadMoveFast()) {
             speed = 0.5f;
             maxSpeed = 10f;
 
@@ -213,8 +230,10 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
 
     @Override
     public void tick(TickableVisual.Context context) {
-        instancerProvider().instancer(InstanceTypes.TRANSFORMED, Models.partial(be
-                        .stateMachine.getShulkerHeadModel()))
-                .stealInstance(shulkerHead);
+        var headModel = be.getShulkerHeadModel();
+        if (headModel != null) {
+            instancerProvider().instancer(InstanceTypes.TRANSFORMED, Models.partial(headModel))
+                    .stealInstance(shulkerHead);
+        }
     }
 }

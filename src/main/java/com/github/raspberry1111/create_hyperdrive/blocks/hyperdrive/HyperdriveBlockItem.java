@@ -5,6 +5,8 @@ import com.github.raspberry1111.create_hyperdrive.AllDataComponents;
 import com.github.raspberry1111.create_hyperdrive.AllItems;
 import com.github.raspberry1111.create_hyperdrive.CreateHyperdrive;
 import com.github.raspberry1111.create_hyperdrive.mixin.ShulkerAccessor;
+import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.Phase;
+import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.ShulkerStatus;
 import net.createmod.catnip.math.VecHelper;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
@@ -31,7 +33,9 @@ import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
@@ -45,8 +49,7 @@ public class HyperdriveBlockItem extends BlockItem {
         return new HyperdriveBlockItem(
                 block,
                 properties.component(AllDataComponents.CURRENT_PROGRESS, 0)
-                        .component(AllDataComponents.SHULKER_STATUS, HyperdriveStateMachine.ShulkerStatus.NORMAL)
-                        .component(AllDataComponents.PHASE, HyperdriveStateMachine.Phase.CHARGING));
+                        .component(AllDataComponents.PHASE, Phase.charging(ShulkerStatus.NORMAL)));
     }
 
     public static HyperdriveBlockItem empty(Properties properties) {
@@ -59,37 +62,31 @@ public class HyperdriveBlockItem extends BlockItem {
 
     public static ItemStack filledStack() {
         ItemStack stack = AllBlocks.HYPERDRIVE.asItem().getDefaultInstance();
-        stack.set(AllDataComponents.PHASE, HyperdriveStateMachine.Phase.CHARGING);
-        stack.set(AllDataComponents.SHULKER_STATUS, HyperdriveStateMachine.ShulkerStatus.NORMAL);
+        stack.set(AllDataComponents.PHASE, Phase.charging(ShulkerStatus.NORMAL));
         stack.set(AllDataComponents.CURRENT_PROGRESS, 0);
 
         return stack;
     }
 
     public static boolean hasShulker(ItemStack item) {
-        return item.get(AllDataComponents.SHULKER_STATUS) != null;
+        return item.get(AllDataComponents.PHASE) != null;
     }
 
     public static float getShulkerProperty(ItemStack stack) {
         if (!stack.is(AllBlocks.HYPERDRIVE.asItem()))
             return 0.0f;
 
-        HyperdriveStateMachine.Phase phase = stack.get(AllDataComponents.PHASE);
-        HyperdriveStateMachine.ShulkerStatus shulkerStatus = stack.get(AllDataComponents.SHULKER_STATUS);
+        Phase phase = stack.get(AllDataComponents.PHASE);
 
-        if (phase == null || shulkerStatus == null)
-            return 0.0f;
-
-        if (phase == HyperdriveStateMachine.Phase.COOLDOWN)
-            return 0.25f;
-        if (shulkerStatus == HyperdriveStateMachine.ShulkerStatus.EXHAUSTED)
-            return 0.50f;
-        if (shulkerStatus == HyperdriveStateMachine.ShulkerStatus.NORMAL)
-            return 0.75f;
-        if (shulkerStatus == HyperdriveStateMachine.ShulkerStatus.INFUSED)
-            return 1.0f;
-
-        return 0.0f;
+        return switch (phase) {
+            case Phase.Cooldown ignored -> 0.25f;
+            case Phase.Charging(ShulkerStatus shulkerStatus) -> switch (shulkerStatus) {
+                case EXHAUSTED -> 0.50f;
+                case NORMAL -> 0.75f;
+                case INFUSED -> 1.0f;
+            };
+            case null, default -> 0.0f;
+        };
     }
 
 
@@ -202,8 +199,7 @@ public class HyperdriveBlockItem extends BlockItem {
     public InteractionResult place(BlockPlaceContext context) {
         ItemStack stack = context.getItemInHand();
 
-        HyperdriveStateMachine.Phase phase = stack.getOrDefault(AllDataComponents.PHASE, HyperdriveStateMachine.Phase.CHARGING);
-        HyperdriveStateMachine.ShulkerStatus shulkerStatus = stack.getOrDefault(AllDataComponents.SHULKER_STATUS, HyperdriveStateMachine.ShulkerStatus.NORMAL);
+        HyperdriveBlockEntity.HyperdriveStateMachine.Phase phase = stack.getOrDefault(AllDataComponents.PHASE, new HyperdriveBlockEntity.HyperdriveStateMachine.Phase.Charging(HyperdriveBlockEntity.HyperdriveStateMachine.ShulkerStatus.NORMAL));
         int currentProgress = stack.getOrDefault(AllDataComponents.CURRENT_PROGRESS, 0);
 
         InteractionResult result = super.place(context);
@@ -216,11 +212,8 @@ public class HyperdriveBlockItem extends BlockItem {
         BlockPos pos = context.getClickedPos();
 
         if (level.getBlockEntity(pos) instanceof HyperdriveBlockEntity be) {
-            // we should never actually use the defaults from getOrDefault here because if the block entity exists then
-            // there was a shulker_status component on the item stack (see HyperdriveBlock.newBlockEntity)
-            be.stateMachine.phase = phase;
-            be.stateMachine.shulkerStatus = shulkerStatus; // default is NORMAL because if the block entity was placed, it cant be empty
-            be.stateMachine.setCurrentProgress(currentProgress);
+            be.setPhase(phase);
+            be.setCurrentProgress(currentProgress);
         }
 
         return InteractionResult.sidedSuccess(level.isClientSide);

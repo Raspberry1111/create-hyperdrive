@@ -1,6 +1,6 @@
 package com.github.raspberry1111.create_hyperdrive;
 
-import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveStateMachine;
+import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.component.DataComponentType.Builder;
 import net.minecraft.core.component.DataComponentType;
@@ -13,16 +13,12 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import java.util.function.UnaryOperator;
 
 public class AllDataComponents {
-    public static final Codec<HyperdriveStateMachine.Phase> PHASE_CODEC = StringRepresentable.fromEnum(HyperdriveStateMachine.Phase::values);
-    public static final Codec<HyperdriveStateMachine.ShulkerStatus> SHULKER_STATUS_CODEC = StringRepresentable.fromEnum(HyperdriveStateMachine.ShulkerStatus::values);
+    public static final Codec<HyperdriveBlockEntity.HyperdriveStateMachine.Phase> PHASE_CODEC = Codec.STRING.xmap(HyperdriveBlockEntity.HyperdriveStateMachine.Phase::fromString, HyperdriveBlockEntity.HyperdriveStateMachine.Phase::getSerializedName);
     private static final DeferredRegister.DataComponents DATA_COMPONENTS = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, CreateHyperdrive.MODID);
 
-    public static final DataComponentType<HyperdriveStateMachine.Phase> PHASE =
+    public static final DataComponentType<HyperdriveBlockEntity.HyperdriveStateMachine.Phase> PHASE =
             register("phase",
                     builder -> builder.persistent(PHASE_CODEC).networkSynchronized(ByteBufCodecs.fromCodec(PHASE_CODEC)));
-    public static final DataComponentType<HyperdriveStateMachine.ShulkerStatus> SHULKER_STATUS =
-            register("shulker_status",
-                    builder -> builder.persistent(SHULKER_STATUS_CODEC).networkSynchronized(ByteBufCodecs.fromCodec(SHULKER_STATUS_CODEC)));
 
     public static final DataComponentType<Integer> CURRENT_PROGRESS =
             register("current_progress",
