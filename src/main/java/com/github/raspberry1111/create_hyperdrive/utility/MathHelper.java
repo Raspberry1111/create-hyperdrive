@@ -16,7 +16,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.border.WorldBorder;
-import net.minecraft.world.level.dimension.DimensionType;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 
@@ -60,20 +59,12 @@ public class MathHelper {
         );
     }
 
-//    public static double dimensionScale(final Level from, final Level to) {
-//        return from.dimensionType().coordinateScale() / to.dimensionType().coordinateScale();
-//    }
-
-    public static boolean subLevelChainIntersectsAny(final SubLevel baseSubLevel, final ServerLevel targetLevel, final Collection<ResourceLocation> allowList) {
+    public static boolean subLevelChainIntersectsAny(final SubLevel baseSubLevel, final ServerLevel targetLevel, final Collection<ResourceLocation> allowList, final Vector3d shift) {
         final Collection<SubLevel> subLevels = SubLevelHelper.getConnectedChain(baseSubLevel);
 
-        final double scaleRatio = DimensionType.getTeleportationScale(baseSubLevel.getLevel().dimensionType(), targetLevel.dimensionType());
         for (final SubLevel subLevel : subLevels) {
             final BoundingBox3dc boundingBox = subLevel.boundingBox();
-            final Vector3d oldCenter = boundingBox.center();
-            final Vector3d newCenter = boundingBox.center().mul(scaleRatio, 1, scaleRatio);
-
-            final BoundingBox3d transformedBoundingBox = boundingBox.move(newCenter.x - oldCenter.x, newCenter.y - oldCenter.y, newCenter.z - oldCenter.z, new BoundingBox3d());
+            final BoundingBox3d transformedBoundingBox = boundingBox.move(shift.x, shift.y, shift.z, new BoundingBox3d());
 
             if (transformedBoundingBox.minY() < targetLevel.getMinBuildHeight()) {
                 CreateHyperdrive.LOGGER.info("[subLevelChainIntersectsAny] below void");

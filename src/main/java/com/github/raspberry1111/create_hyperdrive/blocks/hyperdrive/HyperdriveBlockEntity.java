@@ -121,9 +121,14 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         if (AllConfigs.server().continousChecking.get()) {
             final MinecraftServer server = Objects.requireNonNull(Objects.requireNonNull(level).getServer());
             final ResourceKey<Level> target = getTargetDimension();
-
             final ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
-            return !MathHelper.subLevelChainIntersectsAny((ServerSubLevel) subLevel, targetLevel, ALLOW_LIST);
+
+            final double scale = DimensionType.getTeleportationScale(level.dimensionType(), targetLevel.dimensionType());
+            final Vec3 hyperdrivePosition = subLevel.logicalPose().transformPosition(getBlockPos().getCenter());
+            final Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
+            final Vector3d shift = new Vector3d(newHyperdrivePosition.x - hyperdrivePosition.x, newHyperdrivePosition.y - hyperdrivePosition.y, newHyperdrivePosition.z - hyperdrivePosition.z);
+
+            return !MathHelper.subLevelChainIntersectsAny((ServerSubLevel) subLevel, targetLevel, ALLOW_LIST, shift);
         } else {
             return true;
         }
@@ -216,16 +221,18 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             final ResourceKey<Level> target = getTargetDimension();
             final ServerLevel sourceLevel = serverSubLevel.getLevel();
             final ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
+
             final double scale = DimensionType.getTeleportationScale(sourceLevel.dimensionType(), targetLevel.dimensionType());
             final Vector3d sublevelPosition = serverSubLevel.logicalPose().position();
-            final Vector3d newSublevelPosition = sublevelPosition.mul(scale, 1.0, scale, new Vector3d());
 
             final Vec3 hyperdrivePosition = serverSubLevel.logicalPose().transformPosition(getBlockPos().getCenter());
-            final Vec3 relativeHyperdrivePosition = hyperdrivePosition.subtract(sublevelPosition.x, sublevelPosition.y, sublevelPosition.z);
-            final Vector3d newHyperdrivePosition = newSublevelPosition.add(new Vector3d(relativeHyperdrivePosition.x, relativeHyperdrivePosition.y, relativeHyperdrivePosition.z), new Vector3d());
+            final Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
+            final Vector3d shift = new Vector3d(newHyperdrivePosition.x - hyperdrivePosition.x, newHyperdrivePosition.y - hyperdrivePosition.y, newHyperdrivePosition.z - hyperdrivePosition.z);
+
+            final Vector3d newSublevelPosition = sublevelPosition.add(shift, new Vector3d());
 
             CreateHyperdrive.LOGGER.debug("[Hyperdrive::triggerTeleportation] trying to teleport to {} in {}", newSublevelPosition, target);
-            if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST)) {
+            if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST, shift)) {
                 stateMachine.failedLastTeleport = false; // update stateMachine before we teleport
 
                 sourceLevel.playSound(null, hyperdrivePosition.x, hyperdrivePosition.y, hyperdrivePosition.z, AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
