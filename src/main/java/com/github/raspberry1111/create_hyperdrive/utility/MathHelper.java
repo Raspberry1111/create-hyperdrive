@@ -8,6 +8,7 @@ import dev.ryanhcode.sable.companion.math.BoundingBox3dc;
 import dev.ryanhcode.sable.companion.math.BoundingBox3i;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
+import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -19,9 +20,12 @@ import net.minecraft.world.level.border.WorldBorder;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Collection;
 import java.util.List;
 
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class MathHelper {
 
     /**
@@ -33,7 +37,7 @@ public class MathHelper {
      * @param normal the unit normal of the plane
      * @return the projected vector
      */
-    public static Vector3f projectOntoPlane(Vector3f v, Vector3f normal) {
+    public static Vector3f projectOntoPlane(final Vector3f v, final Vector3f normal) {
         return projectOntoPlane(v, normal, v);
     }
 
@@ -47,8 +51,8 @@ public class MathHelper {
      * @param dest   where the result is stored
      * @return the projected vector
      */
-    public static Vector3f projectOntoPlane(Vector3f v, Vector3f normal, Vector3f dest) {
-        float dot = v.dot(normal);
+    public static Vector3f projectOntoPlane(final Vector3f v, final Vector3f normal, final Vector3f dest) {
+        final float dot = v.dot(normal);
         return dest.set(
                 v.x - normal.x * dot,
                 v.y - normal.y * dot,
@@ -56,18 +60,18 @@ public class MathHelper {
         );
     }
 
-    public static double dimensionScale(Level from, Level to) {
+    public static double dimensionScale(final Level from, final Level to) {
         return from.dimensionType().coordinateScale() / to.dimensionType().coordinateScale();
     }
 
-    public static boolean subLevelChainIntersectsAny(SubLevel baseSubLevel, ServerLevel targetLevel, Collection<ResourceLocation> allowList) {
+    public static boolean subLevelChainIntersectsAny(final SubLevel baseSubLevel, final ServerLevel targetLevel, final Collection<ResourceLocation> allowList) {
         final Collection<SubLevel> subLevels = SubLevelHelper.getConnectedChain(baseSubLevel);
 
-        double scaleRatio = dimensionScale(baseSubLevel.getLevel(), targetLevel);
-        for (SubLevel subLevel : subLevels) {
+        final double scaleRatio = dimensionScale(baseSubLevel.getLevel(), targetLevel);
+        for (final SubLevel subLevel : subLevels) {
             final BoundingBox3dc boundingBox = subLevel.boundingBox();
-            Vector3d oldCenter = boundingBox.center();
-            Vector3d newCenter = boundingBox.center().mul(scaleRatio, 1, scaleRatio);
+            final Vector3d oldCenter = boundingBox.center();
+            final Vector3d newCenter = boundingBox.center().mul(scaleRatio, 1, scaleRatio);
 
             final BoundingBox3d transformedBoundingBox = boundingBox.move(newCenter.x - oldCenter.x, newCenter.y - oldCenter.y, newCenter.z - oldCenter.z, new BoundingBox3d());
 
@@ -76,7 +80,7 @@ public class MathHelper {
                 return true;
             }
 
-            WorldBorder worldBorder = targetLevel.getWorldBorder();
+            final WorldBorder worldBorder = targetLevel.getWorldBorder();
             if (!worldBorder.isWithinBounds(transformedBoundingBox.toMojang())) {
                 CreateHyperdrive.LOGGER.info("[subLevelChainIntersectsAny] not inside world border");
                 return true;
@@ -95,8 +99,8 @@ public class MathHelper {
         return false;
     }
 
-    public static boolean boundingBoxIntersectsBlocks(BoundingBox3dc boundingBox, ServerLevel level, Collection<ResourceLocation> allowList) {
-        BoundingBox3i chunkBounds = boundingBox.chunkBoundsFrom();
+    public static boolean boundingBoxIntersectsBlocks(final BoundingBox3dc boundingBox, final ServerLevel level, final Collection<ResourceLocation> allowList) {
+        final BoundingBox3i chunkBounds = boundingBox.chunkBoundsFrom();
         for (int cx = chunkBounds.minX(); cx < chunkBounds.maxX(); cx++) {
             for (int cz = chunkBounds.minZ(); cz < chunkBounds.maxZ(); cz++) {
                 level.getChunk(cx, cz); //make sure all chunks are generated
@@ -110,9 +114,9 @@ public class MathHelper {
 
 
         for (final BlockPos position : stream) {
-            BlockState state = level.getBlockState(position);
+            final BlockState state = level.getBlockState(position);
 
-            ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+            final ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
             if (!allowList.contains(id)) {
                 CreateHyperdrive.LOGGER.debug("[boundingBoxIntersectsBlocks] intersecting {}", id);
                 return true;
@@ -122,15 +126,15 @@ public class MathHelper {
         return false;
     }
 
-    public static boolean boundingBoxIntersectsSubLevels(BoundingBox3dc boundingBox, ServerLevel level) {
-        ServerSubLevelContainer container = ServerSubLevelContainer.getContainer(level);
+    public static boolean boundingBoxIntersectsSubLevels(final BoundingBox3dc boundingBox, final ServerLevel level) {
+        final ServerSubLevelContainer container = ServerSubLevelContainer.getContainer(level);
 
         if (container == null) {
             return false;
         }
 
-        List<ServerSubLevel> subLevels = container.getAllSubLevels();
-        for (ServerSubLevel subLevel : subLevels) {
+        final List<ServerSubLevel> subLevels = container.getAllSubLevels();
+        for (final ServerSubLevel subLevel : subLevels) {
             if (boundingBox.intersects(subLevel.boundingBox())) { // todo: maybe use OBB collision detection here
                 return true;
             }

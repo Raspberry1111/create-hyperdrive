@@ -43,36 +43,36 @@ import java.util.Objects;
 public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<HyperdriveBlockEntity>, IWrenchable {
     public static final BooleanProperty HAS_SHULKER = BooleanProperty.create("shulker");
 
-    public HyperdriveBlock(Properties properties) {
+    public HyperdriveBlock(final Properties properties) {
         super(properties);
         registerDefaultState(defaultBlockState().setValue(HAS_SHULKER, false));
     }
 
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        BlockEntity blockentity = level.getBlockEntity(pos);
+    public VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        final BlockEntity blockentity = level.getBlockEntity(pos);
         return blockentity instanceof HyperdriveBlockEntity ? Shapes.create(((HyperdriveBlockEntity) blockentity).getBoundingBox(state)) : Shapes.block();
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(HAS_SHULKER);
         super.createBlockStateDefinition(builder);
     }
 
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public @Nullable BlockEntity newBlockEntity(final BlockPos pos, final BlockState state) {
         if (!state.getValue(HAS_SHULKER))
             return null;
         return IBE.super.newBlockEntity(pos, state);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        ItemStack stack = context.getItemInHand();
-        Item item = stack.getItem();
-        BlockState defaultState = defaultBlockState();
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        final ItemStack stack = context.getItemInHand();
+        final Item item = stack.getItem();
+        final BlockState defaultState = defaultBlockState();
         if (!(item instanceof HyperdriveBlockItem))
             return defaultState;
 
@@ -82,12 +82,12 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
 
 
     @Override
-    public Direction.Axis getRotationAxis(BlockState state) {
+    public Direction.Axis getRotationAxis(final BlockState state) {
         return state.getValue(FACING).getAxis();
     }
 
     @Override
-    public boolean hasShaftTowards(LevelReader world, BlockPos pos, BlockState state, Direction face) {
+    public boolean hasShaftTowards(final LevelReader world, final BlockPos pos, final BlockState state, final Direction face) {
         return face == state.getValue(FACING)
                 .getOpposite();
     }
@@ -102,13 +102,13 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
         return AllBlockEntityTypes.HYPERDRIVE.get();
     }
 
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+    protected ItemInteractionResult useItemOn(final ItemStack stack, final BlockState state, final Level level, final BlockPos pos, final Player player, final InteractionHand hand, final BlockHitResult hitResult) {
         if (!state.getValue(HAS_SHULKER)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
 
-        BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (!(blockEntity instanceof HyperdriveBlockEntity hyperdrive))
+        final BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (!(blockEntity instanceof final HyperdriveBlockEntity hyperdrive))
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
         if (level.isClientSide())
@@ -131,10 +131,10 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
 
 
     @Override
-    public ItemStack getCloneItemStack(BlockState state, HitResult target, LevelReader level, BlockPos pos, Player player) {
-        BlockEntity be = level.getBlockEntity(pos);
+    public ItemStack getCloneItemStack(final BlockState state, final HitResult target, final LevelReader level, final BlockPos pos, final Player player) {
+        final BlockEntity be = level.getBlockEntity(pos);
 
-        if (be instanceof HyperdriveBlockEntity hyperdrive) {
+        if (be instanceof final HyperdriveBlockEntity hyperdrive) {
             return hyperdrive.getItemStackWithData();
         } else {
             return AllBlocks.HYPERDRIVE.asStack();
@@ -142,13 +142,13 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
     }
 
     @Override
-    public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
-        List<ItemStack> drops = new ArrayList<>();
+    public List<ItemStack> getDrops(final BlockState state, final LootParams.Builder builder) {
+        final List<ItemStack> drops = new ArrayList<>();
 
-        BlockEntity be = builder.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
+        final BlockEntity be = builder.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
 
-        ItemStack stack;
-        if (be instanceof HyperdriveBlockEntity hyperdrive) {
+        final ItemStack stack;
+        if (be instanceof final HyperdriveBlockEntity hyperdrive) {
             stack = hyperdrive.getItemStackWithData();
         } else {
             stack = HyperdriveBlockItem.emptyStack();

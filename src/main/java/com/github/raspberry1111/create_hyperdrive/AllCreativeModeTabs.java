@@ -1,6 +1,7 @@
 package com.github.raspberry1111.create_hyperdrive;
 
 import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockItem;
+import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -8,8 +9,11 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.function.BiConsumer;
 
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class AllCreativeModeTabs {
     private static final DeferredRegister<CreativeModeTab> REGISTER =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, CreateHyperdrive.MODID);
@@ -27,11 +31,11 @@ public class AllCreativeModeTabs {
                     .build());
 
 
-    public static void register(IEventBus modEventBus) {
+    public static void register(final IEventBus modEventBus) {
         REGISTER.register(modEventBus);
     }
 
-    public static void provideLang(BiConsumer<String, String> consumer) {
+    public static void provideLang(final BiConsumer<String, String> consumer) {
         consumer.accept("itemGroup." + CreateHyperdrive.MODID, "Create: Hyperdrive");
     }
 }

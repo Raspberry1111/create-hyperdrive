@@ -4,7 +4,12 @@ import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBl
 import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveRenderer;
 import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveVisual;
 import com.tterrag.registrate.util.entry.BlockEntityEntry;
+import net.minecraft.MethodsReturnNonnullByDefault;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class AllBlockEntityTypes {
     public static final BlockEntityEntry<HyperdriveBlockEntity> HYPERDRIVE = CreateHyperdrive.REGISTRATE.blockEntity("hyperdrive", HyperdriveBlockEntity::new)
             .visual(() -> HyperdriveVisual::new, false)

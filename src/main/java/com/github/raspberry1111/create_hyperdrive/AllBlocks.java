@@ -6,11 +6,16 @@ import com.github.raspberry1111.create_hyperdrive.configs.CStress;
 import com.simibubi.create.foundation.data.AssetLookup;
 import com.simibubi.create.foundation.data.SharedProperties;
 import com.tterrag.registrate.util.entry.BlockEntry;
+import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.world.level.material.MapColor;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import static com.github.raspberry1111.create_hyperdrive.CreateHyperdrive.REGISTRATE;
 import static com.simibubi.create.foundation.data.TagGen.pickaxeOnly;
 
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class AllBlocks {
     public static final BlockEntry<HyperdriveBlock> HYPERDRIVE = REGISTRATE.block("hyperdrive", HyperdriveBlock::new)
             .initialProperties(SharedProperties::softMetal)

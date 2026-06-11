@@ -7,6 +7,8 @@ import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour
 import com.simibubi.create.foundation.blockEntity.behaviour.CenteredSideValueBoxTransform;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.INamedIconOptions;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollOptionBehaviour;
+import com.simibubi.create.foundation.sound.SoundScapes;
+import dev.egg.SubLevelWarper;
 import dev.engine_room.flywheel.lib.model.baked.PartialModel;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
@@ -31,21 +33,18 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import dev.egg.SubLevelWarper;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
-import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
-
-import com.simibubi.create.foundation.sound.SoundScapes;
 
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
@@ -61,15 +60,14 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     private boolean shouldTick = false;
 
 
-    public HyperdriveBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+    public HyperdriveBlockEntity(final BlockEntityType<?> type, final BlockPos pos, final BlockState state) {
         super(type, pos, state);
-
         setLazyTickRate(HyperdriveStateMachine.LAZY_TICK_RATE);
         stateMachine = new HyperdriveStateMachine(this::getSpeed, this::triggerTeleportation);
     }
 
-    public float getOpenProgress(float progress, float partialTick) {
-        float partialWork;
+    public float getOpenProgress(final float progress, final float partialTick) {
+        final float partialWork;
 
         if (partialTick == 0 || !shouldTick()) {
             partialWork = 0;
@@ -77,11 +75,11 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             partialWork = partialTick * (float) stateMachine.chargeSpeedMultiplier();
         }
 
-        var openProgress = switch (stateMachine.phase) {
-            case HyperdriveStateMachine.Phase.Cooldown ignored -> 0;
-            case HyperdriveStateMachine.Phase.Active ignored ->
+        final var openProgress = switch (stateMachine.phase) {
+            case final HyperdriveStateMachine.Phase.Cooldown ignored -> 0;
+            case final HyperdriveStateMachine.Phase.Active ignored ->
                     (HyperdriveStateMachine.ACTIVE_TICKS - (progress + partialWork)) / HyperdriveStateMachine.ACTIVE_TICKS;
-            case HyperdriveStateMachine.Phase.Charging ignored ->
+            case final HyperdriveStateMachine.Phase.Charging ignored ->
                     (progress + partialWork * getSpeed()) / stateMachine.targetChargeProgress();
         };
         return Math.clamp(openProgress, -1, 1);
@@ -101,14 +99,14 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         if (!isSpeedRequirementFulfilled()) return false;
         if (isTargetDimensionCurrent()) return false;
 
-        SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
+        final SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
         if (subLevel == null) return false;
 
         if (AllConfigs.server().continousChecking.get()) {
-            MinecraftServer server = Objects.requireNonNull(Objects.requireNonNull(level).getServer());
-            ResourceKey<Level> target = getTargetDimension();
+            final MinecraftServer server = Objects.requireNonNull(Objects.requireNonNull(level).getServer());
+            final ResourceKey<Level> target = getTargetDimension();
 
-            ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
+            final ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
             return !MathHelper.subLevelChainIntersectsAny((ServerSubLevel) subLevel, targetLevel, ALLOW_LIST);
         } else {
             return true;
@@ -117,7 +115,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
     public boolean shouldTick() {
         if (level != null && !level.isClientSide()) {
-            boolean newShouldTick = serverShouldTick();
+            final boolean newShouldTick = serverShouldTick();
             if (newShouldTick != shouldTick) {
                 shouldTick = newShouldTick;
                 sync();
@@ -134,7 +132,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     }
 
     @Override
-    public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
+    public void addBehaviours(final List<BlockEntityBehaviour> behaviours) {
         super.addBehaviours(behaviours);
 
         targetDimension = new ScrollOptionBehaviour<>(TargetDimension.class,
@@ -157,6 +155,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         }
 
         stateMachine.tick();
+
     }
 
     @Override
@@ -178,7 +177,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             return false;
         }
 
-        ResourceKey<Level> targetID = getTargetDimension();
+        final ResourceKey<Level> targetID = getTargetDimension();
         return targetID == level.dimension();
     }
 
@@ -186,17 +185,17 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         if (level == null || level.isClientSide) {
             return;
         }
-        MinecraftServer server = Objects.requireNonNull(level.getServer());
+        final MinecraftServer server = Objects.requireNonNull(level.getServer());
 
-        SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
-        if (subLevel instanceof ServerSubLevel serverSubLevel) {
-            ResourceKey<Level> target = getTargetDimension();
-            ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
-            double scale = MathHelper.dimensionScale(serverSubLevel.getLevel(), targetLevel);
-            Vector3d newSublevelPosition = serverSubLevel.logicalPose().position().mul(scale, 1.0, scale, new Vector3d());
+        final SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
+        if (subLevel instanceof final ServerSubLevel serverSubLevel) {
+            final ResourceKey<Level> target = getTargetDimension();
+            final ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
+            final double scale = MathHelper.dimensionScale(serverSubLevel.getLevel(), targetLevel);
+            final Vector3d newSublevelPosition = serverSubLevel.logicalPose().position().mul(scale, 1.0, scale, new Vector3d());
 
-            Vec3 hyperdrivePosition = SableCompanion.INSTANCE.projectOutOfSubLevel(level, (Position) getBlockPos().getCenter());
-            Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
+            final Vec3 hyperdrivePosition = SableCompanion.INSTANCE.projectOutOfSubLevel(level, (Position) getBlockPos().getCenter());
+            final Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
 
             CreateHyperdrive.LOGGER.debug("[Hyperdrive::triggerTeleportation] trying to teleport to {} in {}", newSublevelPosition, target);
             if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST)) {
@@ -226,7 +225,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     }
 
     @Override
-    public void write(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
+    public void write(final CompoundTag compound, final HolderLookup.Provider registries, final boolean clientPacket) {
         compound.putString("phase", stateMachine.phase.getSerializedName());
         compound.putInt("current_progress", stateMachine.getCurrentProgress());
         compound.putBoolean("failed_last_teleport", stateMachine.failedLastTeleport);
@@ -239,7 +238,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     }
 
     @Override
-    protected void read(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
+    protected void read(final CompoundTag compound, final HolderLookup.Provider registries, final boolean clientPacket) {
         stateMachine.setPhase(HyperdriveStateMachine.Phase.fromString(compound.getString("phase")));
         stateMachine.setCurrentProgress(compound.getInt("current_progress"));
         stateMachine.failedLastTeleport = compound.getBoolean("failed_last_teleport");
@@ -251,12 +250,12 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         super.read(compound, registries, clientPacket);
     }
 
-    public AABB getBoundingBox(BlockState state) {
+    public AABB getBoundingBox(final BlockState state) {
         return Shulker.getProgressAabb(1.0F, state.getValue(HyperdriveBlock.FACING), Math.abs(getOpenProgress(stateMachine.getCurrentProgress(), 0)));
     }
 
     public ItemStack getItemStackWithData() {
-        ItemStack stack = HyperdriveBlockItem.filledStack();
+        final ItemStack stack = HyperdriveBlockItem.filledStack();
 
         stack.set(AllDataComponents.PHASE, stateMachine.phase);
         stack.set(AllDataComponents.CURRENT_PROGRESS, stateMachine.getCurrentProgress());
@@ -265,7 +264,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     }
 
     public boolean infuse() {
-        boolean value = stateMachine.infuse();
+        final boolean value = stateMachine.infuse();
         shouldTick();
         return value;
     }
@@ -279,7 +278,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         return stateMachine.getPhase();
     }
 
-    public void setPhase(HyperdriveStateMachine.Phase phase) {
+    public void setPhase(final HyperdriveStateMachine.Phase phase) {
         stateMachine.setPhase(phase);
     }
 
@@ -287,7 +286,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         return stateMachine.getCurrentProgress();
     }
 
-    public void setCurrentProgress(int currentProgress) {
+    public void setCurrentProgress(final int currentProgress) {
         stateMachine.currentProgress = currentProgress;
     }
 
@@ -301,15 +300,15 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         private final String translation;
         private final AllIcons icon;
 
-        TargetDimension(AllIcons icon, String translation) {
+        TargetDimension(final AllIcons icon, final String translation) {
             this.icon = icon;
             this.translationKey = CreateHyperdrive.MODID + ".hyperdrive." + Lang.asId(name());
             this.translation = translation;
         }
 
-        public static void provideLang(BiConsumer<String, String> consumer) {
+        public static void provideLang(final BiConsumer<String, String> consumer) {
             consumer.accept(CreateHyperdrive.MODID + ".hyperdrive.target_dimension", "Target Dimension");
-            for (TargetDimension dimension : TargetDimension.values()) {
+            for (final TargetDimension dimension : TargetDimension.values()) {
                 consumer.accept(dimension.translationKey, dimension.translation);
             }
         }
@@ -328,14 +327,14 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     private static class TargetDimensionValueBox extends CenteredSideValueBoxTransform {
         public TargetDimensionValueBox() {
             super((blockState, direction) -> {
-                Direction facing = blockState.getValue(HyperdriveBlock.FACING);
+                final Direction facing = blockState.getValue(HyperdriveBlock.FACING);
                 return facing.getAxis() != direction.getAxis();
             });
         }
 
         @Override
-        public Vec3 getLocalOffset(LevelAccessor level, BlockPos pos, BlockState state) {
-            Direction facing = state.getValue(HyperdriveBlock.FACING);
+        public Vec3 getLocalOffset(final LevelAccessor level, final BlockPos pos, final BlockState state) {
+            final Direction facing = state.getValue(HyperdriveBlock.FACING);
             return super.getLocalOffset(level, pos, state).add(Vec3.atLowerCornerOf(facing.getNormal())
                     .scale(-4 / 16f));
         }
@@ -351,7 +350,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         private int currentProgress = 0;
         private boolean failedLastTeleport = false;
 
-        HyperdriveStateMachine(Supplier<Float> speedSupplier, Runnable onTrigger) {
+        HyperdriveStateMachine(final Supplier<Float> speedSupplier, final Runnable onTrigger) {
             this.speedSupplier = speedSupplier;
             this.onTrigger = onTrigger;
         }
@@ -360,7 +359,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             return phase;
         }
 
-        public void setPhase(Phase phase) {
+        public void setPhase(final Phase phase) {
             currentProgress = 0;
             this.phase = phase;
         }
@@ -370,7 +369,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         }
 
         public int targetCooldownProgress() {
-            int target = AllConfigs.server().cooldownTicks.get();
+            final int target = AllConfigs.server().cooldownTicks.get();
 
             if (failedLastTeleport) {
                 return (int) (target * AllConfigs.server().failedTeleportMultiplier.getF());
@@ -383,13 +382,13 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             return currentProgress;
         }
 
-        void setCurrentProgress(int value) {
+        void setCurrentProgress(final int value) {
             currentProgress = value;
         }
 
         public void tick() {
-            if (phase instanceof Phase.Charging(ShulkerStatus status)) {
-                int work = (int) Math.round(speedSupplier.get() * status.chargeSpeedMultiplier());
+            if (phase instanceof Phase.Charging(final ShulkerStatus status)) {
+                final int work = (int) Math.round(speedSupplier.get() * status.chargeSpeedMultiplier());
                 currentProgress += work;
 
                 if (Math.abs(currentProgress) >= targetChargeProgress()) {
@@ -431,18 +430,20 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
         public boolean infuse() {
             return switch (phase) {
-                case Phase.Cooldown ignored -> {
+                case final Phase.Cooldown ignored -> {
                     setPhase(Phase.charging(ShulkerStatus.EXHAUSTED));
                     yield true;
                 }
-                case Phase.Charging(ShulkerStatus shulkerStatus) when shulkerStatus == ShulkerStatus.EXHAUSTED -> {
-                    int oldProgress = getCurrentProgress();
+                case Phase.Charging(
+                        final ShulkerStatus shulkerStatus
+                ) when shulkerStatus == ShulkerStatus.EXHAUSTED -> {
+                    final int oldProgress = getCurrentProgress();
                     setPhase(Phase.charging(ShulkerStatus.NORMAL));
                     setCurrentProgress(oldProgress);
                     yield true;
                 }
-                case Phase.Charging(ShulkerStatus shulkerStatus) when shulkerStatus == ShulkerStatus.NORMAL -> {
-                    int oldProgress = getCurrentProgress();
+                case Phase.Charging(final ShulkerStatus shulkerStatus) when shulkerStatus == ShulkerStatus.NORMAL -> {
+                    final int oldProgress = getCurrentProgress();
                     setPhase(Phase.charging(ShulkerStatus.INFUSED));
                     setCurrentProgress(oldProgress);
                     yield true;
@@ -458,7 +459,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
                 return AllPartialModels.SHULKER_HEAD_COOLDOWN;
             }
 
-            if (phase instanceof Phase.Charging(ShulkerStatus status)) {
+            if (phase instanceof Phase.Charging(final ShulkerStatus status)) {
                 return switch (status) {
                     case EXHAUSTED -> AllPartialModels.SHULKER_HEAD_EXHAUSTED;
                     case NORMAL -> AllPartialModels.SHULKER_HEAD_NORMAL;
@@ -470,7 +471,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         }
 
         public double chargeSpeedMultiplier() {
-            if (phase instanceof Phase.Charging(ShulkerStatus status)) {
+            if (phase instanceof Phase.Charging(final ShulkerStatus status)) {
                 return status.chargeSpeedMultiplier();
             } else {
                 return 1.0;
@@ -484,7 +485,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             INFUSED;
 
 
-            public static ShulkerStatus fromString(String s) {
+            public static ShulkerStatus fromString(final String s) {
                 return switch (s) {
                     case "exhausted" -> EXHAUSTED;
                     case "normal" -> NORMAL;
@@ -512,13 +513,13 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         }
 
         public sealed interface Phase permits Phase.Charging, Phase.Active, Phase.Cooldown {
-            static Phase fromString(String s) {
+            static Phase fromString(final String s) {
                 return switch (s) {
                     case "active" -> new Active();
                     case "cooldown" -> new Cooldown();
-                    case String chargingString when s.startsWith("charging:") -> {
-                        String[] parts = chargingString.split(":", 2);
-                        ShulkerStatus status = parts.length > 1
+                    case final String chargingString when s.startsWith("charging:") -> {
+                        final String[] parts = chargingString.split(":", 2);
+                        final ShulkerStatus status = parts.length > 1
                                 ? ShulkerStatus.fromString(parts[1])
                                 : ShulkerStatus.NORMAL;
                         yield new Charging(status);
@@ -527,7 +528,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
                 };
             }
 
-            static Phase charging(ShulkerStatus status) {
+            static Phase charging(final ShulkerStatus status) {
                 return new Charging(status);
             }
 

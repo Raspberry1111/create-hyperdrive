@@ -1,8 +1,12 @@
 package com.github.raspberry1111.create_hyperdrive.configs;
 
 import net.createmod.catnip.config.ConfigBase;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.MethodsReturnNonnullByDefault;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class CClient extends ConfigBase {
 
     public final ConfigGroup client = group(0, "client",
@@ -12,7 +16,7 @@ public class CClient extends ConfigBase {
     public final ConfigInt rotations = i(4, 0, Integer.MAX_VALUE, "rotations", Comments.rotations);
 
     @Override
-    public @NotNull String getName() {
+    public String getName() {
         return "client";
     }
 

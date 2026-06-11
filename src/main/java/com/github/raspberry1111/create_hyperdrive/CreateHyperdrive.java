@@ -6,6 +6,7 @@ import com.simibubi.create.compat.Mods;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import com.tterrag.registrate.providers.ProviderType;
 import dev.egg.registries.BlockEntityRegistry;
+import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -16,10 +17,12 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
-// The value here should match an entry in the META-INF/neoforge.mods.toml file
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 @Mod(CreateHyperdrive.MODID)
 public class CreateHyperdrive {
     public static final String MODID = "create_hyperdrive";
@@ -27,9 +30,9 @@ public class CreateHyperdrive {
     public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(MODID);
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public CreateHyperdrive(IEventBus modEventBus, ModContainer modContainer) {
+    public CreateHyperdrive(final IEventBus modEventBus, final ModContainer modContainer) {
         REGISTRATE.registerEventListeners(modEventBus);
-        ModLoadingContext modLoadingContext = ModLoadingContext.get();
+        final ModLoadingContext modLoadingContext = ModLoadingContext.get();
 
         modEventBus.addListener(this::commonSetup);
 
@@ -46,7 +49,7 @@ public class CreateHyperdrive {
         AllSounds.register(modEventBus);
 
         REGISTRATE.addDataGenerator(ProviderType.LANG, provider -> {
-            BiConsumer<String, String> langConsumer = provider::add;
+            final BiConsumer<String, String> langConsumer = provider::add;
 
             HyperdriveBlockEntity.TargetDimension.provideLang(langConsumer);
             AllCreativeModeTabs.provideLang(langConsumer);
@@ -60,7 +63,7 @@ public class CreateHyperdrive {
         }
     }
 
-    public static ResourceLocation asResource(String path) {
+    public static ResourceLocation asResource(final String path) {
         return ResourceLocation.fromNamespaceAndPath(MODID, path);
     }
 

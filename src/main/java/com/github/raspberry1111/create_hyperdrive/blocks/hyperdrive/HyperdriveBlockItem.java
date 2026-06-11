@@ -4,9 +4,9 @@ import com.github.raspberry1111.create_hyperdrive.AllBlocks;
 import com.github.raspberry1111.create_hyperdrive.AllDataComponents;
 import com.github.raspberry1111.create_hyperdrive.AllItems;
 import com.github.raspberry1111.create_hyperdrive.CreateHyperdrive;
-import com.github.raspberry1111.create_hyperdrive.mixin.ShulkerAccessor;
 import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.Phase;
 import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.ShulkerStatus;
+import com.github.raspberry1111.create_hyperdrive.mixin.ShulkerAccessor;
 import net.createmod.catnip.math.VecHelper;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
@@ -33,25 +33,24 @@ import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
-
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
 public class HyperdriveBlockItem extends BlockItem {
-    public HyperdriveBlockItem(Block block, Properties properties) {
+    public HyperdriveBlockItem(final Block block, final Properties properties) {
         super(block, properties);
     }
 
-    public static HyperdriveBlockItem withShulker(Block block, Properties properties) {
+    public static HyperdriveBlockItem withShulker(final Block block, final Properties properties) {
         return new HyperdriveBlockItem(
                 block,
                 properties.component(AllDataComponents.CURRENT_PROGRESS, 0)
                         .component(AllDataComponents.PHASE, Phase.charging(ShulkerStatus.NORMAL)));
     }
 
-    public static HyperdriveBlockItem empty(Properties properties) {
+    public static HyperdriveBlockItem empty(final Properties properties) {
         return new HyperdriveBlockItem(AllBlocks.HYPERDRIVE.get(), properties);
     }
 
@@ -60,26 +59,26 @@ public class HyperdriveBlockItem extends BlockItem {
     }
 
     public static ItemStack filledStack() {
-        ItemStack stack = AllBlocks.HYPERDRIVE.asItem().getDefaultInstance();
+        final ItemStack stack = AllBlocks.HYPERDRIVE.asItem().getDefaultInstance();
         stack.set(AllDataComponents.PHASE, Phase.charging(ShulkerStatus.NORMAL));
         stack.set(AllDataComponents.CURRENT_PROGRESS, 0);
 
         return stack;
     }
 
-    public static boolean hasShulker(ItemStack item) {
+    public static boolean hasShulker(final ItemStack item) {
         return item.get(AllDataComponents.PHASE) != null;
     }
 
-    public static float getShulkerProperty(ItemStack stack) {
+    public static float getShulkerProperty(final ItemStack stack) {
         if (!stack.is(AllBlocks.HYPERDRIVE.asItem()))
             return 0.0f;
 
-        Phase phase = stack.get(AllDataComponents.PHASE);
+        final Phase phase = stack.get(AllDataComponents.PHASE);
 
         return switch (phase) {
-            case Phase.Cooldown ignored -> 0.25f;
-            case Phase.Charging(ShulkerStatus shulkerStatus) -> switch (shulkerStatus) {
+            case final Phase.Cooldown ignored -> 0.25f;
+            case Phase.Charging(final ShulkerStatus shulkerStatus) -> switch (shulkerStatus) {
                 case EXHAUSTED -> 0.50f;
                 case NORMAL -> 0.75f;
                 case INFUSED -> 1.0f;
@@ -90,17 +89,17 @@ public class HyperdriveBlockItem extends BlockItem {
 
 
     @Override
-    public InteractionResult useOn(UseOnContext context) {
-        ItemStack stack = context.getItemInHand();
+    public InteractionResult useOn(final UseOnContext context) {
+        final ItemStack stack = context.getItemInHand();
         if (!hasShulker(stack))
             return super.useOn(context);
 
-        Level world = context.getLevel();
-        BlockPos pos = context.getClickedPos();
-        BlockEntity be = world.getBlockEntity(pos);
-        Player player = context.getPlayer();
+        final Level world = context.getLevel();
+        final BlockPos pos = context.getClickedPos();
+        final BlockEntity be = world.getBlockEntity(pos);
+        final Player player = context.getPlayer();
 
-        if (!(be instanceof ShulkerBoxBlockEntity shulker))
+        if (!(be instanceof final ShulkerBoxBlockEntity shulker))
             return super.useOn(context);
 
         if (shulker.hasAnyMatching((item) -> !item.isEmpty()))
@@ -109,9 +108,9 @@ public class HyperdriveBlockItem extends BlockItem {
         if (world.isClientSide || player == null)
             return InteractionResult.SUCCESS;
 
-        Direction direction = world.getBlockState(pos).getValue(ShulkerBoxBlock.FACING).getOpposite();
+        final Direction direction = world.getBlockState(pos).getValue(ShulkerBoxBlock.FACING).getOpposite();
 
-        Shulker shulkerEntity = EntityType.SHULKER.create(world);
+        final Shulker shulkerEntity = EntityType.SHULKER.create(world);
         if (shulkerEntity == null)
             return super.useOn(context);
 
@@ -127,23 +126,23 @@ public class HyperdriveBlockItem extends BlockItem {
     }
 
     @Override
-    public InteractionResult interactLivingEntity(ItemStack heldItem, Player player, LivingEntity entity,
-                                                  InteractionHand hand) {
+    public InteractionResult interactLivingEntity(final ItemStack heldItem, final Player player, final LivingEntity entity,
+                                                  final InteractionHand hand) {
         if (hasShulker(heldItem))
             return InteractionResult.PASS;
         if (entity.getType() != EntityType.SHULKER)
             return InteractionResult.PASS;
 
-        Level world = player.level();
+        final Level world = player.level();
         spawnCaptureEffects(world, entity.position());
         if (world.isClientSide)
             return InteractionResult.FAIL;
 
         giveHyperdriveItemTo(filledStack(), player, heldItem, hand);
-        DyeColor color = ((Shulker) entity).getColor();
-        Direction direction = ((Shulker) entity).getAttachFace().getOpposite();
+        final DyeColor color = ((Shulker) entity).getColor();
+        final Direction direction = ((Shulker) entity).getAttachFace().getOpposite();
 
-        Block shulkerBlock = switch (color) {
+        final Block shulkerBlock = switch (color) {
             case null -> Blocks.SHULKER_BOX;
             case WHITE -> Blocks.WHITE_SHULKER_BOX;
             case ORANGE -> Blocks.ORANGE_SHULKER_BOX;
@@ -163,8 +162,8 @@ public class HyperdriveBlockItem extends BlockItem {
             case BLACK -> Blocks.BLACK_SHULKER_BOX;
         };
 
-        BlockState state = shulkerBlock.defaultBlockState().setValue(ShulkerBoxBlock.FACING, direction);
-        BlockPos pos = new BlockPos(entity.getBlockX(), entity.getBlockY(), entity.getBlockZ());
+        final BlockState state = shulkerBlock.defaultBlockState().setValue(ShulkerBoxBlock.FACING, direction);
+        final BlockPos pos = new BlockPos(entity.getBlockX(), entity.getBlockY(), entity.getBlockZ());
         if (world.getBlockState(pos).canBeReplaced()) {
             world.setBlock(pos, state, Block.UPDATE_ALL);
         }
@@ -174,7 +173,7 @@ public class HyperdriveBlockItem extends BlockItem {
     }
 
 
-    protected void giveHyperdriveItemTo(ItemStack stack, Player player, ItemStack heldItem, InteractionHand hand) {
+    protected void giveHyperdriveItemTo(final ItemStack stack, final Player player, final ItemStack heldItem, final InteractionHand hand) {
         if (!player.isCreative())
             heldItem.shrink(1);
         if (heldItem.isEmpty()) {
@@ -185,32 +184,32 @@ public class HyperdriveBlockItem extends BlockItem {
                 .placeItemBackInInventory(stack);
     }
 
-    private void spawnCaptureEffects(Level world, Vec3 vec) {
+    private void spawnCaptureEffects(final Level world, final Vec3 vec) {
         if (world.isClientSide) {
             for (int i = 0; i < 40; i++) {
-                Vec3 motion = VecHelper.offsetRandomly(Vec3.ZERO, world.random, .125f);
+                final Vec3 motion = VecHelper.offsetRandomly(Vec3.ZERO, world.random, .125f);
                 world.addParticle(ParticleTypes.END_ROD, vec.x, vec.y, vec.z, motion.x * 2, motion.y, motion.z * 2);
             }
         }
     }
 
     @Override
-    public InteractionResult place(BlockPlaceContext context) {
-        ItemStack stack = context.getItemInHand();
+    public InteractionResult place(final BlockPlaceContext context) {
+        final ItemStack stack = context.getItemInHand();
 
-        HyperdriveBlockEntity.HyperdriveStateMachine.Phase phase = stack.getOrDefault(AllDataComponents.PHASE, new HyperdriveBlockEntity.HyperdriveStateMachine.Phase.Charging(HyperdriveBlockEntity.HyperdriveStateMachine.ShulkerStatus.NORMAL));
-        int currentProgress = stack.getOrDefault(AllDataComponents.CURRENT_PROGRESS, 0);
+        final HyperdriveBlockEntity.HyperdriveStateMachine.Phase phase = stack.getOrDefault(AllDataComponents.PHASE, new HyperdriveBlockEntity.HyperdriveStateMachine.Phase.Charging(HyperdriveBlockEntity.HyperdriveStateMachine.ShulkerStatus.NORMAL));
+        final int currentProgress = stack.getOrDefault(AllDataComponents.CURRENT_PROGRESS, 0);
 
-        InteractionResult result = super.place(context);
+        final InteractionResult result = super.place(context);
 
         if (result == InteractionResult.FAIL) {
             return result;
         }
 
-        Level level = context.getLevel();
-        BlockPos pos = context.getClickedPos();
+        final Level level = context.getLevel();
+        final BlockPos pos = context.getClickedPos();
 
-        if (level.getBlockEntity(pos) instanceof HyperdriveBlockEntity be) {
+        if (level.getBlockEntity(pos) instanceof final HyperdriveBlockEntity be) {
             be.setPhase(phase);
             be.setCurrentProgress(currentProgress);
         }
@@ -219,8 +218,8 @@ public class HyperdriveBlockItem extends BlockItem {
     }
 
     @Override
-    public Component getName(ItemStack stack) {
-        String base = "item." + CreateHyperdrive.MODID + ".hyperdrive";
+    public Component getName(final ItemStack stack) {
+        final String base = "item." + CreateHyperdrive.MODID + ".hyperdrive";
         return Component.translatable(hasShulker(stack) ? base : base + "_empty");
     }
 }

@@ -1,7 +1,12 @@
 package com.github.raspberry1111.create_hyperdrive;
 
 import dev.engine_room.flywheel.lib.model.baked.PartialModel;
+import net.minecraft.MethodsReturnNonnullByDefault;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class AllPartialModels {
     public static final PartialModel
             SHULKER_HEAD_NORMAL = block("hyperdrive/shulker_head/normal"),
@@ -14,9 +19,7 @@ public class AllPartialModels {
     TINY_SHAFT = block("tiny_shaft");
 
 
-
-
-    private static PartialModel block(String path) {
+    private static PartialModel block(final String path) {
         return PartialModel.of(CreateHyperdrive.asResource("block/" + path));
     }
 

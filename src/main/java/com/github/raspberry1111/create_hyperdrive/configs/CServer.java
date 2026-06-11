@@ -1,8 +1,12 @@
 package com.github.raspberry1111.create_hyperdrive.configs;
 
 import net.createmod.catnip.config.ConfigBase;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.MethodsReturnNonnullByDefault;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class CServer extends ConfigBase {
     public final ConfigGroup server = group(0, "hyperdrive",
             Comments.server);
@@ -22,7 +26,7 @@ public class CServer extends ConfigBase {
     public final ConfigFloat failedTeleportMultiplier = f(0.25f, 0.0f, 5.0f, "failed teleport multiplier", Comments.failedTeleportMultiplier);
 
     @Override
-    public @NotNull String getName() {
+    public String getName() {
         return "server";
     }
 
