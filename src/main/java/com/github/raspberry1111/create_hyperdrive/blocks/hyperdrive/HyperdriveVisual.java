@@ -1,13 +1,11 @@
 package com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive;
 
-import com.github.raspberry1111.create_hyperdrive.AllConfigs;
 import com.github.raspberry1111.create_hyperdrive.AllPartialModels;
-import com.github.raspberry1111.create_hyperdrive.utility.MathHelper;
 import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.Phase;
-import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.ShulkerStatus;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntityVisual;
 import com.simibubi.create.content.kinetics.base.RotatingInstance;
 import com.simibubi.create.foundation.render.AllInstanceTypes;
+import dev.engine_room.flywheel.api.instance.Instance;
 import dev.engine_room.flywheel.api.visual.DynamicVisual;
 import dev.engine_room.flywheel.api.visual.TickableVisual;
 import dev.engine_room.flywheel.api.visualization.VisualizationContext;
@@ -15,24 +13,24 @@ import dev.engine_room.flywheel.lib.instance.InstanceTypes;
 import dev.engine_room.flywheel.lib.instance.TransformedInstance;
 import dev.engine_room.flywheel.lib.model.Models;
 import dev.engine_room.flywheel.lib.visual.SimpleDynamicVisual;
+import dev.engine_room.flywheel.lib.visual.SimpleTickableVisual;
 import dev.ryanhcode.sable.companion.SableCompanion;
-import net.createmod.catnip.animation.LerpedFloat;
-import net.createmod.catnip.math.AngleHelper;
-import net.minecraft.client.Minecraft;
+import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Position;
-import dev.engine_room.flywheel.api.instance.Instance;
-import dev.engine_room.flywheel.lib.visual.SimpleTickableVisual;
-import net.minecraft.world.phys.Vec3;
-import org.joml.*;
+import net.minecraft.util.RandomSource;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
-import static net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING;
-
-import java.lang.Math;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import static net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING;
+
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEntity> implements SimpleDynamicVisual, SimpleTickableVisual {
 
     private final Matrix4f baseHeadTransform = new Matrix4f();
@@ -41,20 +39,20 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
     private final TransformedInstance shulkerHead;
     private final TransformedInstance lid;
     private final Direction opposite;
-    private final LerpedFloat headAngle = LerpedFloat.angular();
     private final HyperdriveBlockEntity be;
+    private final RandomSource random = RandomSource.create();
 
-    public HyperdriveVisual(VisualizationContext context, HyperdriveBlockEntity blockEntity, float partialTick) {
+    public HyperdriveVisual(final VisualizationContext context, final HyperdriveBlockEntity blockEntity, final float partialTick) {
         super(context, blockEntity, partialTick);
 
         be = blockEntity;
-        Direction direction = blockState.getValue(FACING);
+        final Direction direction = blockState.getValue(FACING);
 
         opposite = direction.getOpposite();
         shaft = instancerProvider().instancer(AllInstanceTypes.ROTATING, Models.partial(AllPartialModels.TINY_SHAFT))
                 .createInstance();
         shulkerHead = instancerProvider().instancer(InstanceTypes.TRANSFORMED, Models.partial(
-                        Objects.requireNonNullElse(be.getShulkerHeadModel(), AllPartialModels.SHULKER_HEAD_NORMAL)
+                        Objects.requireNonNullElse(HyperdriveRenderer.getHeadModel(be.getPhase()), AllPartialModels.SHULKER_HEAD_NORMAL)
                 ))
                 .createInstance();
 
@@ -65,15 +63,13 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
                 .rotateToFace(Direction.SOUTH, opposite)
                 .setChanged();
 
-        Direction shulkerAlign = Direction.fromAxisAndDirection(rotationAxis(), direction.getAxisDirection());
         shulkerHead.translate(getVisualPosition())
                 .center()
-                .rotate(new Quaternionf().rotateTo(0, 1, 0, shulkerAlign.getStepX(), shulkerAlign.getStepY(), shulkerAlign.getStepZ())).setChanged();
+                .rotate(new Quaternionf().rotateTo(0, 1, 0, direction.getStepX(), direction.getStepY(), direction.getStepZ())).setChanged();
 
-        Direction lidAlign = shulkerAlign;
         lid.translate(getVisualPosition())
                 .center()
-                .rotate(new Quaternionf().rotateTo(0, 1, 0, lidAlign.getStepX(), lidAlign.getStepY(), lidAlign.getStepZ()))
+                .rotate(new Quaternionf().rotateTo(0, 1, 0, direction.getStepX(), direction.getStepY(), direction.getStepZ()))
                 .rotateYDegrees(switch (direction) {
                     case EAST -> -90;
                     case SOUTH -> -180;
@@ -87,16 +83,15 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
 
     }
 
-
     @Override
-    public void update(float pt) {
+    public void update(final float pt) {
         shaft.setup(blockEntity)
                 .setChanged();
     }
 
     @Override
-    public void updateLight(float partialTick) {
-        BlockPos behind = pos.relative(opposite);
+    public void updateLight(final float partialTick) {
+        final BlockPos behind = pos.relative(opposite);
         relight(behind, shaft);
         relight(shulkerHead);
         relight(lid);
@@ -110,127 +105,52 @@ public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEn
     }
 
     @Override
-    public void collectCrumblingInstances(Consumer<Instance> consumer) {
+    public void collectCrumblingInstances(final Consumer<Instance> consumer) {
         consumer.accept(shaft);
         consumer.accept(lid);
     }
 
     @Override
-    public void beginFrame(DynamicVisual.Context ctx) {
-        float openProgress = be.getOpenProgress(be.getCurrentProgress(), ctx.partialTick());
-        animateLid(openProgress, ctx.partialTick());
+    public void beginFrame(final DynamicVisual.Context ctx) {
+        final float openProgress = be.getOpenProgress(be.getCurrentProgress(), ctx.partialTick());
+
         animateHead(openProgress, ctx.partialTick());
+        animateLid(openProgress);
     }
 
-    private void animateHead(float openProgress, float partialTick) {
-        var level = be.getLevel();
+    private void animateHead(final float openProgress, final float partialTick) {
+        final float deg = HyperdriveRenderer.getHeadRotationDegrees(be.getBlockPos().getCenter(),
+                baseHeadTransform.transformDirection(0, 1, 0, new Vector3f()).normalize(),
+                baseHeadTransform.transformDirection(0, 0, -1, new Vector3f()).normalize(),
+                SableCompanion.INSTANCE.getContainingClient(be),
+                partialTick, random, be.getPhase(), be.headAngle
+        );
+        final Vector3f dir = HyperdriveRenderer.getHeadDisplacement(openProgress);
 
-        var sublevel = SableCompanion.INSTANCE.getContainingClient(be);
-
-        Vector3f up = baseHeadTransform.transformDirection(0, 1, 0, new Vector3f()).normalize();
-        Vector3f forward = baseHeadTransform.transformDirection(0, 0, -1, new Vector3f()).normalize();
-        if (sublevel != null) {
-            // apply the sable rotation onto the normals
-            var upd = sublevel.renderPose().transformNormal(new Vector3d(up.x, up.y, up.z)).normalize();
-            var forwardd = sublevel.renderPose().transformNormal(new Vector3d(forward.x, forward.y, forward.z)).normalize();
-
-            up = new Vector3f((float) upd.x, (float) upd.y, (float) upd.z);
-            forward = new Vector3f((float) forwardd.x, (float) forwardd.y, (float) forwardd.z);
-        }
-
-        MathHelper.projectOntoPlane(forward, up);
-
-
-        var player = Minecraft.getInstance().player;
-        var target = player == null ? null : player.getEyePosition();
-
-        Vec3 pos = be.getBlockPos().getCenter();
-        if (sublevel != null) {
-            pos = SableCompanion.INSTANCE.projectOutOfSubLevel(level, (Position) pos);
-        }
-
-        float deg;
-        if (target != null && target.distanceToSqr(pos) < 75.0) {
-            Vector3f toTarget = new Vector3f(
-                    (float) (target.x - pos.x),
-                    (float) (target.y - pos.y),
-                    (float) (target.z - pos.z)
-            ).normalize();
-            MathHelper.projectOntoPlane(toTarget, up);
-
-            double angle = Math.atan2(
-                    up.dot(new Vector3f(forward).cross(toTarget)),
-                    forward.dot(toTarget)
-            );
-
-            deg = AngleHelper.deg(angle);
-        } else {
-            deg = headAngle.getChaseTarget();
-        }
-
-        shulkerHead.setTransform(baseHeadTransform);
-        rotateTowards(deg, partialTick);
-
-        var dir = new Vector3f(0, Math.abs(openProgress / 4), 0);
-        shulkerHead.translate(dir);
-        shulkerHead.uncenter().setChanged();
-    }
-
-    private void animateLid(float openProgress, float partialTick) {
-        lid.setTransform(baseLidTransform);
-
-        if (!(be.getPhase() instanceof HyperdriveBlockEntity.HyperdriveStateMachine.Phase.Active)) {
-            lid.rotateY((float) Math.PI * 2 * AllConfigs.client().rotations.get() * openProgress);
-        }
-
-        var dir = new Vector3f(0, Math.abs(openProgress), 0);
-        lid
+        shulkerHead
+                .setTransform(baseHeadTransform)
+                .rotateYDegrees(deg)
                 .uncenter()
                 .translate(dir)
                 .setChanged();
     }
 
-    public boolean shouldHeadMoveSlow() {
-        return switch (be.getPhase()) {
-            case Phase.Cooldown ignored -> true;
-            case Phase.Charging(ShulkerStatus shulkerStatus) when shulkerStatus == ShulkerStatus.EXHAUSTED -> true;
-            default -> false;
-        };
-    }
+    private void animateLid(final float openProgress) {
+        final Phase phase = be.getPhase();
+        final float rads = HyperdriveRenderer.getLidRotationRads(phase, openProgress);
+        final var dir = new Vector3f(0, Math.abs(openProgress), 0);
 
-    public boolean shouldHeadMoveFast() {
-        return switch (be.getPhase()) {
-            case Phase.Charging(ShulkerStatus shulkerStatus) when shulkerStatus == ShulkerStatus.INFUSED -> true;
-            default -> false;
-        };
-    }
-
-    public void rotateTowards(float deg, float partialTick) {
-        float speed = 0.1f;
-        float maxSpeed = 2f;
-        float randomNoise = 0;
-
-        if (shouldHeadMoveSlow()) {
-            speed = 0.05f;
-            maxSpeed = 1f;
-        } else if (shouldHeadMoveFast()) {
-            speed = 0.5f;
-            maxSpeed = 10f;
-
-            if (AllConfigs.client().jittering.get() && Math.random() > 0.90) {
-                randomNoise += (float) (3 - Math.random() * 6); // goes from -3 to 3
-            }
-        }
-
-        headAngle.chase(deg, speed, LerpedFloat.Chaser.exp(maxSpeed));
-        headAngle.tickChaser();
-
-        shulkerHead.rotateYDegrees(headAngle.getValue(partialTick) + randomNoise).setChanged();
+        lid
+                .setTransform(baseLidTransform)
+                .rotateY(rads)
+                .uncenter()
+                .translate(dir)
+                .setChanged();
     }
 
     @Override
-    public void tick(TickableVisual.Context context) {
-        var headModel = be.getShulkerHeadModel();
+    public void tick(final TickableVisual.Context context) {
+        final var headModel = HyperdriveRenderer.getHeadModel(be.getPhase());
         if (headModel != null) {
             instancerProvider().instancer(InstanceTypes.TRANSFORMED, Models.partial(headModel))
                     .stealInstance(shulkerHead);

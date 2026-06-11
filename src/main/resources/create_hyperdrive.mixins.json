@@ -5,6 +5,7 @@
   "minVersion": "0.8",
   "refmap": "create_power_loader.refmap.json",
   "mixins": [
+    "DragonBreathParticleMixin",
     "ShulkerAccessor"
   ],
   "client": [

@@ -9,16 +9,18 @@ import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.INamedIc
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollOptionBehaviour;
 import com.simibubi.create.foundation.sound.SoundScapes;
 import dev.egg.SubLevelWarper;
-import dev.engine_room.flywheel.lib.model.baked.PartialModel;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import net.createmod.catnip.animation.LerpedFloat;
 import net.createmod.catnip.lang.Lang;
+import net.createmod.catnip.math.VecHelper;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Position;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -26,6 +28,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.item.ItemStack;
@@ -37,7 +40,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -54,7 +56,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             ResourceLocation.fromNamespaceAndPath("minecraft", "void_air"),
             ResourceLocation.fromNamespaceAndPath("minecraft", "cave_air")
     );
-
+    public final LerpedFloat headAngle = LerpedFloat.angular();
     private final HyperdriveStateMachine stateMachine;
     private ScrollOptionBehaviour<TargetDimension> targetDimension;
     private boolean shouldTick = false;
@@ -67,20 +69,33 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     }
 
     public float getOpenProgress(final float progress, final float partialTick) {
-        final float partialWork;
+        float partialWork;
 
-        if (partialTick == 0 || !shouldTick()) {
+//        if (partialTick == 0 || !shouldTick()) {
+//            partialWork = 0;
+//        } else {
+        partialWork = partialTick * (float) stateMachine.chargeSpeedMultiplier();
+//        }
+
+        if (!shouldTick()) {
             partialWork = 0;
-        } else {
-            partialWork = partialTick * (float) stateMachine.chargeSpeedMultiplier();
         }
 
         final var openProgress = switch (stateMachine.phase) {
             case final HyperdriveStateMachine.Phase.Cooldown ignored -> 0;
-            case final HyperdriveStateMachine.Phase.Active ignored ->
-                    (HyperdriveStateMachine.ACTIVE_TICKS - (progress + partialWork)) / HyperdriveStateMachine.ACTIVE_TICKS;
-            case final HyperdriveStateMachine.Phase.Charging ignored ->
-                    (progress + partialWork * getSpeed()) / stateMachine.targetChargeProgress();
+            case final HyperdriveStateMachine.Phase.Active ignored -> (HyperdriveStateMachine.ACTIVE_TICKS -
+                    (progress + partialWork) // progress during active is always positive so we can just add
+            )
+                    / HyperdriveStateMachine.ACTIVE_TICKS;
+            case final HyperdriveStateMachine.Phase.Charging ignored -> {
+                float speed = getSpeed();
+                if (!shouldTick() && progress != 0) {
+                    speed = -Math.signum(progress) * HyperdriveStateMachine.DECAY_RATE;
+                    partialWork = partialTick;
+                }
+
+                yield (progress + partialWork * speed) / stateMachine.targetChargeProgress();
+            }
         };
         return Math.clamp(openProgress, -1, 1);
     }
@@ -147,6 +162,14 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
 
         if (level != null && level.isClientSide()) {
             tickAudio();
+            headAngle.tickChaser();
+
+            final var openProgress = getOpenProgress(getCurrentProgress(), 0);
+            if (level.getRandom().nextFloat() > 0.99 - 0.5 * Math.abs(openProgress)) {
+                final Vec3 motion = VecHelper.offsetRandomly(Vec3.ZERO, level.getRandom(), (float) (0.125f + 0.125 * Math.abs(openProgress)));
+                final Vec3 pos = getBlockPos().getCenter();
+                level.addParticle(ParticleTypes.DRAGON_BREATH, pos.x, pos.y, pos.z, motion.x, motion.y, motion.z);
+            }
         }
 
         if (!shouldTick()) {
@@ -204,6 +227,14 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
                 level.playSound(null, BlockPos.containing(hyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
                 SubLevelWarper.WarpSubLevel(serverSubLevel, targetLevel, newSublevelPosition);
                 targetLevel.playSound(null, BlockPos.containing(newHyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
+
+                final RandomSource random = level.getRandom();
+                final Vec3 motionA = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
+                final Vec3 motionB = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
+
+                ((ServerLevel) level).sendParticles(ParticleTypes.DRAGON_BREATH, hyperdrivePosition.x, hyperdrivePosition.y, hyperdrivePosition.z, 1000, motionA.x, motionA.y, motionA.z, 2.0);
+                targetLevel.sendParticles(ParticleTypes.DRAGON_BREATH, newHyperdrivePosition.x, newHyperdrivePosition.y, newHyperdrivePosition.z, 1000, motionB.x, motionB.y, motionB.z, 2.0);
+
                 return;
             } else {
                 level.playSound(null, BlockPos.containing(hyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_FAILED.get(), SoundSource.MASTER, 1.5f, 1f);
@@ -267,11 +298,6 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         final boolean value = stateMachine.infuse();
         shouldTick();
         return value;
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    public @Nullable PartialModel getShulkerHeadModel() {
-        return stateMachine.getShulkerHeadModel();
     }
 
     public HyperdriveStateMachine.Phase getPhase() {
@@ -343,6 +369,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     public static class HyperdriveStateMachine {
         public static final int LAZY_TICK_RATE = 20;
         public static final int ACTIVE_TICKS = 1;
+        public static final int DECAY_RATE = 16; // how fast to decay to 0 when not actively charging
         private final Supplier<Float> speedSupplier;
         private final Runnable onTrigger;
 
@@ -422,9 +449,9 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             if (Math.abs(currentProgress) < 8) {
                 setCurrentProgress(0);
             } else if (currentProgress < 0) {
-                setCurrentProgress(currentProgress + 16);
+                setCurrentProgress(currentProgress + DECAY_RATE);
             } else {
-                setCurrentProgress(currentProgress - 16);
+                setCurrentProgress(currentProgress - DECAY_RATE);
             }
         }
 
@@ -450,24 +477,6 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
                 }
                 default -> false;
             };
-        }
-
-        @OnlyIn(Dist.CLIENT)
-        public @Nullable PartialModel getShulkerHeadModel() {
-
-            if (phase instanceof Phase.Cooldown) {
-                return AllPartialModels.SHULKER_HEAD_COOLDOWN;
-            }
-
-            if (phase instanceof Phase.Charging(final ShulkerStatus status)) {
-                return switch (status) {
-                    case EXHAUSTED -> AllPartialModels.SHULKER_HEAD_EXHAUSTED;
-                    case NORMAL -> AllPartialModels.SHULKER_HEAD_NORMAL;
-                    case INFUSED -> AllPartialModels.SHULKER_HEAD_INFUSED;
-                };
-            }
-
-            return null; // the renderer will cache the charging head model for the active state
         }
 
         public double chargeSpeedMultiplier() {
