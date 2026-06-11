@@ -14,9 +14,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.level.dimension.DimensionType;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 
@@ -60,14 +60,14 @@ public class MathHelper {
         );
     }
 
-    public static double dimensionScale(final Level from, final Level to) {
-        return from.dimensionType().coordinateScale() / to.dimensionType().coordinateScale();
-    }
+//    public static double dimensionScale(final Level from, final Level to) {
+//        return from.dimensionType().coordinateScale() / to.dimensionType().coordinateScale();
+//    }
 
     public static boolean subLevelChainIntersectsAny(final SubLevel baseSubLevel, final ServerLevel targetLevel, final Collection<ResourceLocation> allowList) {
         final Collection<SubLevel> subLevels = SubLevelHelper.getConnectedChain(baseSubLevel);
 
-        final double scaleRatio = dimensionScale(baseSubLevel.getLevel(), targetLevel);
+        final double scaleRatio = DimensionType.getTeleportationScale(baseSubLevel.getLevel().dimensionType(), targetLevel.dimensionType());
         for (final SubLevel subLevel : subLevels) {
             final BoundingBox3dc boundingBox = subLevel.boundingBox();
             final Vector3d oldCenter = boundingBox.center();

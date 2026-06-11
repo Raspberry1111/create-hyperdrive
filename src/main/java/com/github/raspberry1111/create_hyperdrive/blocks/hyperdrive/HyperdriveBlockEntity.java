@@ -36,6 +36,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -213,26 +214,29 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         final SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
         if (subLevel instanceof final ServerSubLevel serverSubLevel) {
             final ResourceKey<Level> target = getTargetDimension();
+            final ServerLevel sourceLevel = serverSubLevel.getLevel();
             final ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
-            final double scale = MathHelper.dimensionScale(serverSubLevel.getLevel(), targetLevel);
-            final Vector3d newSublevelPosition = serverSubLevel.logicalPose().position().mul(scale, 1.0, scale, new Vector3d());
+            final double scale = DimensionType.getTeleportationScale(sourceLevel.dimensionType(), targetLevel.dimensionType());
+            final Vector3d sublevelPosition = serverSubLevel.logicalPose().position();
+            final Vector3d newSublevelPosition = sublevelPosition.mul(scale, 1.0, scale, new Vector3d());
 
-            final Vec3 hyperdrivePosition = SableCompanion.INSTANCE.projectOutOfSubLevel(level, (Position) getBlockPos().getCenter());
-            final Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
+            final Vec3 hyperdrivePosition = serverSubLevel.logicalPose().transformPosition(getBlockPos().getCenter());
+            final Vec3 relativeHyperdrivePosition = hyperdrivePosition.subtract(sublevelPosition.x, sublevelPosition.y, sublevelPosition.z);
+            final Vector3d newHyperdrivePosition = newSublevelPosition.add(new Vector3d(relativeHyperdrivePosition.x, relativeHyperdrivePosition.y, relativeHyperdrivePosition.z), new Vector3d());
 
             CreateHyperdrive.LOGGER.debug("[Hyperdrive::triggerTeleportation] trying to teleport to {} in {}", newSublevelPosition, target);
             if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST)) {
                 stateMachine.failedLastTeleport = false; // update stateMachine before we teleport
 
-                level.playSound(null, BlockPos.containing(hyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
+                sourceLevel.playSound(null, hyperdrivePosition.x, hyperdrivePosition.y, hyperdrivePosition.z, AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
                 SubLevelWarper.WarpSubLevel(serverSubLevel, targetLevel, newSublevelPosition);
-                targetLevel.playSound(null, BlockPos.containing(newHyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
+                targetLevel.playSound(null, newHyperdrivePosition.x, newHyperdrivePosition.y, newHyperdrivePosition.z, AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
 
-                final RandomSource random = level.getRandom();
+                final RandomSource random = sourceLevel.getRandom();
                 final Vec3 motionA = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
                 final Vec3 motionB = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
 
-                ((ServerLevel) level).sendParticles(ParticleTypes.DRAGON_BREATH, hyperdrivePosition.x, hyperdrivePosition.y, hyperdrivePosition.z, 1000, motionA.x, motionA.y, motionA.z, 2.0);
+                sourceLevel.sendParticles(ParticleTypes.DRAGON_BREATH, hyperdrivePosition.x, hyperdrivePosition.y, hyperdrivePosition.z, 1000, motionA.x, motionA.y, motionA.z, 2.0);
                 targetLevel.sendParticles(ParticleTypes.DRAGON_BREATH, newHyperdrivePosition.x, newHyperdrivePosition.y, newHyperdrivePosition.z, 1000, motionB.x, motionB.y, motionB.z, 2.0);
 
                 return;
