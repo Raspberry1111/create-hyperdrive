@@ -10,8 +10,6 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.BiConsumer;
 
-import static com.github.raspberry1111.create_hyperdrive.CreateHyperdrive.REGISTRATE;
-
 public class AllCreativeModeTabs {
     private static final DeferredRegister<CreativeModeTab> REGISTER =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, CreateHyperdrive.MODID);

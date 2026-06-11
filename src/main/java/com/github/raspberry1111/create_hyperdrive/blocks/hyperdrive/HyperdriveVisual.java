@@ -35,14 +35,14 @@ import java.util.function.Consumer;
 
 public class HyperdriveVisual extends KineticBlockEntityVisual<HyperdriveBlockEntity> implements SimpleDynamicVisual, SimpleTickableVisual {
 
-    protected final Matrix4f baseHeadTransform = new Matrix4f();
-    protected final Matrix4f baseLidTransform = new Matrix4f();
+    private final Matrix4f baseHeadTransform = new Matrix4f();
+    private final Matrix4f baseLidTransform = new Matrix4f();
     private final RotatingInstance shaft;
     private final TransformedInstance shulkerHead;
     private final TransformedInstance lid;
     private final Direction opposite;
     private final LerpedFloat headAngle = LerpedFloat.angular();
-    HyperdriveBlockEntity be;
+    private final HyperdriveBlockEntity be;
 
     public HyperdriveVisual(VisualizationContext context, HyperdriveBlockEntity blockEntity, float partialTick) {
         super(context, blockEntity, partialTick);

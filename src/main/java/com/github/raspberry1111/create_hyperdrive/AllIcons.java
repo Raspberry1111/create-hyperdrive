@@ -5,10 +5,8 @@ import org.joml.Matrix4f;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.simibubi.create.Create;
 
 import net.createmod.catnip.gui.element.DelegatedStencilElement;
-import net.createmod.catnip.gui.element.ScreenElement;
 import net.createmod.catnip.theme.Color;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.LightTexture;

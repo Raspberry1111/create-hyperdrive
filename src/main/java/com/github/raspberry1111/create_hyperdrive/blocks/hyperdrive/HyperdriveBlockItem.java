@@ -35,7 +35,6 @@ import net.minecraft.world.phys.Vec3;
 
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Objects;
 import java.util.Optional;
 
 @ParametersAreNonnullByDefault

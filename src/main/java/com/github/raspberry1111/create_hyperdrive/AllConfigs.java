@@ -7,7 +7,6 @@ import com.simibubi.create.api.stress.BlockStressValues;
 import net.createmod.catnip.config.ConfigBase;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
@@ -46,7 +45,7 @@ public class AllConfigs {
         return config;
     }
 
-    public static void register(ModLoadingContext context, ModContainer container) {
+    public static void register(ModContainer container) {
         CreateHyperdrive.LOGGER.debug("Registering configs");
         client = register(CClient::new, ModConfig.Type.CLIENT);
         server = register(CServer::new, ModConfig.Type.SERVER);

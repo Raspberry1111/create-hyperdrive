@@ -1,11 +1,7 @@
 package com.github.raspberry1111.create_hyperdrive.configs;
 
 import net.createmod.catnip.config.ConfigBase;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
-import java.util.Map;
 
 public class CServer extends ConfigBase {
     public final ConfigGroup server = group(0, "hyperdrive",
@@ -31,13 +27,13 @@ public class CServer extends ConfigBase {
     }
 
     private static class Comments {
-        static String server = "Change the behaviour of the hyperdrive";
-        static String stress = "Fine tune the kinetic stats of individual components";
-        static String chargeTicks = "The number of ticks it takes for the hyperdrive to trigger at 256 rpm";
-        static String cooldownTicks = "The number of ticks it takes for the hyperdrive to be ready to use again after triggering";
-        static String exhaustionMultiplier = "Changes how long the shulker takes to charge when exhausted. 0.5 means that the charge time is doubled when the shulker is exhausted";
-        static String infusionMultiplier = "Changes how long the shulker takes to charge when infused. 2.0 means that the charge time is halved when the shulker is infused";
-        static String continousChecking = "Continuously check if the hyperdrive can teleport and stop charging if it cannot";
-        static String failedTeleportMultiplier = "How much to multiplier the cooldown by if the previous teleport failed";
+        static final String server = "Change the behaviour of the hyperdrive";
+        static final String stress = "Fine tune the kinetic stats of individual components";
+        static final String chargeTicks = "The number of ticks it takes for the hyperdrive to trigger at 256 rpm";
+        static final String cooldownTicks = "The number of ticks it takes for the hyperdrive to be ready to use again after triggering";
+        static final String exhaustionMultiplier = "Changes how long the shulker takes to charge when exhausted. 0.5 means that the charge time is doubled when the shulker is exhausted";
+        static final String infusionMultiplier = "Changes how long the shulker takes to charge when infused. 2.0 means that the charge time is halved when the shulker is infused";
+        static final String continousChecking = "Continuously check if the hyperdrive can teleport and stop charging if it cannot";
+        static final String failedTeleportMultiplier = "How much to multiplier the cooldown by if the previous teleport failed";
     }
 }

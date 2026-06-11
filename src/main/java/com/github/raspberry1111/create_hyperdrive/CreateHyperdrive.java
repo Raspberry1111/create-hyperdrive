@@ -6,26 +6,16 @@ import com.simibubi.create.compat.Mods;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import com.tterrag.registrate.providers.ProviderType;
 import dev.egg.registries.BlockEntityRegistry;
-import net.minecraft.client.renderer.item.ItemProperties;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.data.models.model.ModelTemplate;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
 
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
@@ -52,7 +42,7 @@ public class CreateHyperdrive {
         AllBlockEntityTypes.register();
         AllPartialModels.register();
         AllDataComponents.register(modEventBus);
-        AllConfigs.register(modLoadingContext, modContainer);
+        AllConfigs.register(modContainer);
         AllSounds.register(modEventBus);
 
         REGISTRATE.addDataGenerator(ProviderType.LANG, provider -> {
@@ -75,8 +65,8 @@ public class CreateHyperdrive {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            Mods.JEI.executeIfInstalled(() -> AllRecipes::register);
-        });
+        event.enqueueWork(() ->
+                Mods.JEI.executeIfInstalled(() -> AllRecipes::register)
+        );
     }
 }

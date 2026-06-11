@@ -54,8 +54,8 @@ public class CStress extends ConfigBase {
     }
 
     private static class Comments {
-        static String su = "[in Stress Units]";
-        static String impact =
+        static final String su = "[in Stress Units]";
+        static final String impact =
                 "Configure the individual stress impact of mechanical blocks. Note that this cost is doubled for every speed increase it receives.";
     }
 }

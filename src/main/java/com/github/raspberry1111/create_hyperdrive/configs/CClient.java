@@ -17,8 +17,8 @@ public class CClient extends ConfigBase {
     }
 
     private static class Comments {
-        static String client = "Client-side configs. These do not affect gameplay and are only used for visual and audio effects.";
-        static String jittering = "Enables jittering on some of the hyperdrive components during running";
-        static String rotations = "How many rotations should the hyperdrive lid take before it triggers (does not affect the time taken)";
+        static final String client = "Client-side configs. These do not affect gameplay and are only used for visual and audio effects.";
+        static final String jittering = "Enables jittering on some of the hyperdrive components during running";
+        static final String rotations = "How many rotations should the hyperdrive lid take before it triggers (does not affect the time taken)";
     }
 }

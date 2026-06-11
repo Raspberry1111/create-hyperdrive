@@ -9,7 +9,6 @@ import com.tterrag.registrate.util.entry.BlockEntry;
 import net.minecraft.world.level.material.MapColor;
 
 import static com.github.raspberry1111.create_hyperdrive.CreateHyperdrive.REGISTRATE;
-import static com.simibubi.create.foundation.data.ModelGen.customItemModel;
 import static com.simibubi.create.foundation.data.TagGen.pickaxeOnly;
 
 public class AllBlocks {
