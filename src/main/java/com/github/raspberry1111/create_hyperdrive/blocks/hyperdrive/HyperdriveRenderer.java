@@ -7,6 +7,7 @@ import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBl
 import com.github.raspberry1111.create_hyperdrive.utility.MathHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.simibubi.create.content.kinetics.base.KineticBlockEntityRenderer;
 import com.simibubi.create.foundation.blockEntity.renderer.SafeBlockEntityRenderer;
 import dev.engine_room.flywheel.api.visualization.VisualizationManager;
 import dev.engine_room.flywheel.lib.model.baked.PartialModel;
@@ -164,12 +165,15 @@ public class HyperdriveRenderer extends SafeBlockEntityRenderer<HyperdriveBlockE
 
         SuperByteBuffer headBuffer = CachedBuffers.partial(previousHeadModel, blockState);
         SuperByteBuffer lidBuffer = CachedBuffers.partial(AllPartialModels.HYPERDRIVE_LID, blockState);
+        final SuperByteBuffer shaftBuffer = CachedBuffers.partial(AllPartialModels.TINY_SHAFT, blockState);
 
         final VertexConsumer cutout = bufferSource.getBuffer(RenderType.cutoutMipped());
 
         final Direction direction = be.getBlockState().getValue(FACING);
+        final Direction oppositeDirection = direction.getOpposite();
+
         final Quaternionf rotationQuat = new Quaternionf().rotateTo(
-                0, 1, 0,
+                Direction.UP.getStepX(), Direction.UP.getStepY(), Direction.UP.getStepZ(),
                 direction.getStepX(), direction.getStepY(), direction.getStepZ()
         );
 
@@ -188,6 +192,7 @@ public class HyperdriveRenderer extends SafeBlockEntityRenderer<HyperdriveBlockE
         final Phase phase = be.getPhase();
         final float openProgress = be.getOpenProgress(be.getCurrentProgress(), partialTick);
 
+
         headBuffer
                 .rotateYCenteredDegrees(getHeadRotationDegrees(
                         be.getBlockPos().getCenter(),
@@ -204,5 +209,11 @@ public class HyperdriveRenderer extends SafeBlockEntityRenderer<HyperdriveBlockE
                 .rotateYCentered(getLidRotationRads(phase, openProgress))
                 .translate(getLidDisplacement(openProgress))
                 .light(light).renderInto(ms, cutout);
+
+        KineticBlockEntityRenderer.standardKineticRotationTransform(shaftBuffer, be, light).rotateCentered(new Quaternionf().rotateTo(
+                Direction.SOUTH.getStepX(), Direction.SOUTH.getStepY(), Direction.SOUTH.getStepZ(),
+                oppositeDirection.getStepX(), oppositeDirection.getStepY(), oppositeDirection.getStepZ()
+        )).light(light).renderInto(ms, cutout);
+
     }
 }
