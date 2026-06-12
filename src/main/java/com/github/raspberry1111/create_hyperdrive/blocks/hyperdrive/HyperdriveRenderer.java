@@ -152,6 +152,39 @@ public class HyperdriveRenderer extends SafeBlockEntityRenderer<HyperdriveBlockE
         return new Vector3f(0, Math.abs(openProgress), 0);
     }
 
+    public static float getOpenProgress(final HyperdriveBlockEntity be) {
+        return getOpenProgress(be, 0);
+    }
+
+    public static float getOpenProgress(final HyperdriveBlockEntity be, final float partialTick) {
+        final float progress = be.getCurrentProgress();
+        final float total = be.targetProgress();
+
+        final float openProgress = (float) switch (be.getPhase()) {
+            case final Phase.Cooldown ignored -> 0;
+            case final Phase.Active ignored -> (HyperdriveBlockEntity.HyperdriveStateMachine.ACTIVE_TICKS -
+                    (progress + partialTick) // progress during active is always positive so we can just add
+            )
+                    / total;
+            case final Phase.Charging ignored -> {
+                double partialWork = partialTick * be.getSpeed() * be.chargeSpeedMultiplier();
+
+                if (!be.shouldTick()) {
+                    if (progress != 0) {
+                        // simulate rotating towards 0 at the decay rate
+                        partialWork = partialTick * -Math.signum(progress) * HyperdriveBlockEntity.HyperdriveStateMachine.DECAY_RATE;
+                    } else {
+                        partialWork = 0;
+                    }
+                }
+
+                yield (progress + partialWork) / total;
+            }
+        };
+
+        return Math.clamp(openProgress, -1, 1);
+    }
+
     @Override
     protected void renderSafe(final HyperdriveBlockEntity be, final float partialTick, final PoseStack ms, final MultiBufferSource bufferSource, final int light, final int overlay) {
         if (VisualizationManager.supportsVisualization(be.getLevel())) return;
@@ -190,7 +223,7 @@ public class HyperdriveRenderer extends SafeBlockEntityRenderer<HyperdriveBlockE
         });
 
         final Phase phase = be.getPhase();
-        final float openProgress = be.getOpenProgress(be.getCurrentProgress(), partialTick);
+        final float openProgress = getOpenProgress(be, partialTick);
 
 
         headBuffer

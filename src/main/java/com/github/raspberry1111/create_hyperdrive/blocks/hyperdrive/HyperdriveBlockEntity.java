@@ -45,6 +45,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -67,13 +68,21 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
     );
     public final LerpedFloat headAngle = LerpedFloat.angular();
     private final HyperdriveStateMachine stateMachine;
+    private boolean wouldTeleportCollide = false;
     private ScrollOptionBehaviour<TargetDimension> targetDimension;
-    private boolean shouldTick = false;
 
     public HyperdriveBlockEntity(final BlockEntityType<?> type, final BlockPos pos, final BlockState state) {
         super(type, pos, state);
         setLazyTickRate(HyperdriveStateMachine.LAZY_TICK_RATE);
         stateMachine = new HyperdriveStateMachine(this::getSpeed, this::triggerTeleportation);
+    }
+
+
+    private boolean addFailedHeaderIfNeeded(final List<Component> tooltip, final boolean alreadyAdded) {
+        if (!alreadyAdded) {
+            translate("tooltip.hyperdrive.failed").style(GRAY).forGoggles(tooltip);
+        }
+        return true;
     }
 
     @Override
@@ -109,7 +118,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
 
         builder().space().forGoggles(tooltip);
 
-        final double progress = Math.abs((double) getCurrentProgress()) / stateMachine.targetProgress();
+        final double progress = getProgressPercent();
         translate("tooltip.hyperdrive.progress").style(GRAY)
                 .add(
                         builder().text(LangNumberFormat.format(
@@ -131,52 +140,27 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
 
         boolean failedHeader = false;
 
+
         if (SableCompanion.INSTANCE.getContaining(this) == null) {
-            failedHeader = true;
-            translate("tooltip.hyperdrive.failed").style(GRAY).forGoggles(tooltip);
+            failedHeader = addFailedHeaderIfNeeded(tooltip, failedHeader);
             translate("tooltip.hyperdrive.failed.not_on_sublevel").style(RED).forGoggles(tooltip, 1);
         }
 
-        if (!shouldTick() && isSpeedRequirementFulfilled()) {
-            if (!failedHeader) {
-                translate("tooltip.hyperdrive.failed").style(GRAY).forGoggles(tooltip);
-            }
-            if (isTargetDimensionCurrent()) {
-                translate("tooltip.hyperdrive.failed.target_dimension").style(RED).forGoggles(tooltip, 1);
-            } else { // we must be colliding with something then
-                translate("tooltip.hyperdrive.failed.would_collide").style(RED).forGoggles(tooltip, 1);
-            }
+        if (isTargetDimensionCurrent()) {
+            failedHeader = addFailedHeaderIfNeeded(tooltip, failedHeader);
+            translate("tooltip.hyperdrive.failed.target_dimension").style(RED).forGoggles(tooltip, 1);
+        }
+
+        if (wouldTeleportCollide()) {
+            failedHeader = addFailedHeaderIfNeeded(tooltip, failedHeader);
+            translate("tooltip.hyperdrive.failed.would_collide").style(RED).forGoggles(tooltip, 1);
         }
 
         return true;
     }
 
-    public float getOpenProgress(final float progress, final float partialTick) {
-        float partialWork;
-
-        partialWork = partialTick * (float) stateMachine.chargeSpeedMultiplier();
-
-        if (!shouldTick()) {
-            partialWork = 0;
-        }
-
-        final var openProgress = switch (stateMachine.phase) {
-            case final Phase.Cooldown ignored -> 0;
-            case final Phase.Active ignored -> (HyperdriveStateMachine.ACTIVE_TICKS -
-                    (progress + partialWork) // progress during active is always positive so we can just add
-            )
-                    / HyperdriveStateMachine.ACTIVE_TICKS;
-            case final Phase.Charging ignored -> {
-                float speed = getSpeed();
-                if (!shouldTick() && progress != 0) {
-                    speed = -Math.signum(progress) * HyperdriveStateMachine.DECAY_RATE;
-                    partialWork = partialTick;
-                }
-
-                yield (progress + partialWork * speed) / stateMachine.targetChargeProgress();
-            }
-        };
-        return Math.clamp(openProgress, -1, 1);
+    public double getProgressPercent() {
+        return Math.abs((double) getCurrentProgress()) / stateMachine.targetProgress();
     }
 
     public ResourceKey<Level> getTargetDimension() {
@@ -187,45 +171,64 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
         };
     }
 
-    public boolean serverShouldTick() {
-        if (!(stateMachine.phase instanceof HyperdriveStateMachine.Phase.Charging)) return true;
-
-        if (!isSpeedRequirementFulfilled()) return false;
-        if (isTargetDimensionCurrent()) return false;
-
+    @Nullable
+    private TeleportContext buildTeleportContext() {
         final SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
-        if (subLevel == null) return false;
+        if (!(subLevel instanceof final ServerSubLevel serverSubLevel)) return null;
 
-        if (AllConfigs.server().continousChecking.get()) {
-            final MinecraftServer server = Objects.requireNonNull(Objects.requireNonNull(level).getServer());
-            final ResourceKey<Level> target = getTargetDimension();
-            final ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
+        final MinecraftServer server = Objects.requireNonNull(Objects.requireNonNull(level).getServer());
+        final ResourceKey<Level> target = getTargetDimension();
+        final ServerLevel sourceLevel = serverSubLevel.getLevel();
+        final ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
+        final double scale = DimensionType.getTeleportationScale(sourceLevel.dimensionType(), targetLevel.dimensionType());
+        final Vec3 hyperdrivePosition = serverSubLevel.logicalPose().transformPosition(getBlockPos().getCenter());
+        final Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
+        final Vector3d shift = new Vector3d(newHyperdrivePosition.x - hyperdrivePosition.x, 0, newHyperdrivePosition.z - hyperdrivePosition.z);
+        final Vector3d newSublevelPosition = serverSubLevel.logicalPose().position().add(shift, new Vector3d());
 
-            final double scale = DimensionType.getTeleportationScale(level.dimensionType(), targetLevel.dimensionType());
-            final Vec3 hyperdrivePosition = subLevel.logicalPose().transformPosition(getBlockPos().getCenter());
-            final Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
-            final Vector3d shift = new Vector3d(newHyperdrivePosition.x - hyperdrivePosition.x, newHyperdrivePosition.y - hyperdrivePosition.y, newHyperdrivePosition.z - hyperdrivePosition.z);
-
-            return !MathHelper.subLevelChainIntersectsAny((ServerSubLevel) subLevel, targetLevel, ALLOW_LIST, shift);
-        } else {
-            return true;
-        }
+        return new TeleportContext(serverSubLevel, sourceLevel, targetLevel, target, hyperdrivePosition, newHyperdrivePosition, newSublevelPosition, shift);
     }
 
+    private boolean checkWouldTeleportCollide() {
+        final TeleportContext ctx = buildTeleportContext();
+        if (ctx == null)
+            return false;
 
-    public boolean shouldTick() {
+        return MathHelper.subLevelChainIntersectsAny(ctx.serverSubLevel, ctx.targetLevel, ALLOW_LIST, ctx.shift);
+    }
+
+    public boolean wouldTeleportCollide() {
+        if (!AllConfigs.server().continousChecking.get())
+            return false;
+
         if (level != null && !level.isClientSide()) {
-            final boolean newShouldTick = serverShouldTick();
-            if (newShouldTick != shouldTick) {
-                shouldTick = newShouldTick;
+            final boolean b = checkWouldTeleportCollide();
+            CreateHyperdrive.LOGGER.debug("wouldTeleportCollide: b = {}, current = {}", b, wouldTeleportCollide);
+            if (b != wouldTeleportCollide) {
+                wouldTeleportCollide = b;
                 sync();
             }
         }
-        return shouldTick;
+
+        return wouldTeleportCollide;
+    }
+
+    public boolean shouldTick() {
+        if (!(stateMachine.phase instanceof HyperdriveStateMachine.Phase.Charging)) return true;
+
+        return isSpeedRequirementFulfilled() && !isTargetDimensionCurrent() && !wouldTeleportCollide();
+    }
+
+    public float targetProgress() {
+        return stateMachine.targetProgress();
+    }
+
+    public double chargeSpeedMultiplier() {
+        return stateMachine.chargeSpeedMultiplier();
     }
 
     public void sync() {
-        if (level != null && !level.isClientSide()) {
+        if (level != null && !level.isClientSide() && level.getBlockState(worldPosition) == getBlockState()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), HyperdriveBlock.UPDATE_CLIENTS);
             setChanged();
         }
@@ -249,9 +252,9 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
             tickAudio();
             headAngle.tickChaser();
 
-            final var openProgress = getOpenProgress(getCurrentProgress(), 0);
-            if (level.getRandom().nextFloat() > 0.99 - 0.5 * Math.abs(openProgress)) {
-                final Vec3 motion = VecHelper.offsetRandomly(Vec3.ZERO, level.getRandom(), (float) (0.125f + 0.125 * Math.abs(openProgress)));
+            final float openProgress = Math.abs(HyperdriveRenderer.getOpenProgress(this));
+            if (level.getRandom().nextFloat() > 0.99 - 0.5 * openProgress) {
+                final Vec3 motion = VecHelper.offsetRandomly(Vec3.ZERO, level.getRandom(), (float) (0.125f + 0.125 * openProgress));
                 final Vec3 pos = getBlockPos().getCenter();
                 level.addParticle(ParticleTypes.DRAGON_BREATH, pos.x, pos.y, pos.z, motion.x, motion.y, motion.z);
             }
@@ -262,7 +265,8 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
             return;
         }
 
-        stateMachine.tick();
+        if (stateMachine.tick())
+            sync();
 
     }
 
@@ -277,7 +281,9 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
     @Override
     public void lazyTick() {
         super.lazyTick();
-        stateMachine.lazyTick();
+
+        if (stateMachine.lazyTick())
+            sync();
     }
 
     private boolean isTargetDimensionCurrent() {
@@ -293,44 +299,86 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
         if (level == null || level.isClientSide) {
             return;
         }
-        final MinecraftServer server = Objects.requireNonNull(level.getServer());
 
-        final SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
-        if (subLevel instanceof final ServerSubLevel serverSubLevel) {
-            final ResourceKey<Level> target = getTargetDimension();
-            final ServerLevel sourceLevel = serverSubLevel.getLevel();
-            final ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
+        final TeleportContext ctx = buildTeleportContext();
 
-            final double scale = DimensionType.getTeleportationScale(sourceLevel.dimensionType(), targetLevel.dimensionType());
-            final Vector3d sublevelPosition = serverSubLevel.logicalPose().position();
-
-            final Vec3 hyperdrivePosition = serverSubLevel.logicalPose().transformPosition(getBlockPos().getCenter());
-            final Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
-            final Vector3d shift = new Vector3d(newHyperdrivePosition.x - hyperdrivePosition.x, newHyperdrivePosition.y - hyperdrivePosition.y, newHyperdrivePosition.z - hyperdrivePosition.z);
-
-            final Vector3d newSublevelPosition = sublevelPosition.add(shift, new Vector3d());
-
-            CreateHyperdrive.LOGGER.debug("[Hyperdrive::triggerTeleportation] trying to teleport to {} in {}", newSublevelPosition, target);
-            if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST, shift)) {
-                stateMachine.failedLastTeleport = false; // update stateMachine before we teleport
-
-                sourceLevel.playSound(null, hyperdrivePosition.x, hyperdrivePosition.y, hyperdrivePosition.z, AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
-                SubLevelWarper.WarpSubLevel(serverSubLevel, targetLevel, newSublevelPosition);
-                targetLevel.playSound(null, newHyperdrivePosition.x, newHyperdrivePosition.y, newHyperdrivePosition.z, AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
-
-                final RandomSource random = sourceLevel.getRandom();
-                final Vec3 motionA = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
-                final Vec3 motionB = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
-
-                sourceLevel.sendParticles(ParticleTypes.DRAGON_BREATH, hyperdrivePosition.x, hyperdrivePosition.y, hyperdrivePosition.z, 1000, motionA.x, motionA.y, motionA.z, 2.0);
-                targetLevel.sendParticles(ParticleTypes.DRAGON_BREATH, newHyperdrivePosition.x, newHyperdrivePosition.y, newHyperdrivePosition.z, 1000, motionB.x, motionB.y, motionB.z, 2.0);
-
-                return;
-            } else {
-                level.playSound(null, BlockPos.containing(hyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_FAILED.get(), SoundSource.MASTER, 1.5f, 1f);
-            }
+        if (ctx == null) { // we aren't on a sublevel
+            stateMachine.failedLastTeleport = true;
+            return;
         }
-        stateMachine.failedLastTeleport = true;
+
+        if (!MathHelper.subLevelChainIntersectsAny(ctx.serverSubLevel, ctx.targetLevel, ALLOW_LIST, ctx.shift)) {
+            stateMachine.failedLastTeleport = false; // update stateMachine before we teleport
+
+            SubLevelWarper.WarpSubLevel(ctx.serverSubLevel, ctx.targetLevel, ctx.newSublevelPosition);
+
+            ctx.sourceLevel.playSound(null,
+                    ctx.hyperdrivePosition.x, ctx.hyperdrivePosition.y, ctx.hyperdrivePosition.z,
+                    AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
+            ctx.targetLevel.playSound(null,
+                    ctx.newHyperdrivePosition.x, ctx.newHyperdrivePosition.y, ctx.newHyperdrivePosition.z,
+                    AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
+
+            final RandomSource random = ctx.sourceLevel.getRandom();
+            final Vec3 motionA = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
+            final Vec3 motionB = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
+
+            ctx.sourceLevel.sendParticles(ParticleTypes.DRAGON_BREATH,
+                    ctx.hyperdrivePosition.x, ctx.hyperdrivePosition.y, ctx.hyperdrivePosition.z,
+                    1000,
+                    motionA.x, motionA.y, motionA.z,
+                    2.0);
+            ctx.targetLevel.sendParticles(ParticleTypes.DRAGON_BREATH,
+                    ctx.newHyperdrivePosition.x, ctx.newHyperdrivePosition.y, ctx.newHyperdrivePosition.z,
+                    1000,
+                    motionB.x, motionB.y, motionB.z,
+                    2.0);
+
+        } else {
+            level.playSound(null,
+                    ctx.hyperdrivePosition.x, ctx.hyperdrivePosition.y, ctx.hyperdrivePosition.z,
+                    AllSounds.HYPERDRIVE_ACTIVATE_FAILED.get(), SoundSource.MASTER, 1.5f, 1f);
+        }
+
+//
+//        final MinecraftServer server = Objects.requireNonNull(level.getServer());
+//
+//        final SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(this);
+//        if (subLevel instanceof final ServerSubLevel serverSubLevel) {
+//            final ResourceKey<Level> target = getTargetDimension();
+//            final ServerLevel sourceLevel = serverSubLevel.getLevel();
+//            final ServerLevel targetLevel = Objects.requireNonNull(server.getLevel(target));
+//
+//            final double scale = DimensionType.getTeleportationScale(sourceLevel.dimensionType(), targetLevel.dimensionType());
+//            final Vector3d sublevelPosition = serverSubLevel.logicalPose().position();
+//
+//            final Vec3 hyperdrivePosition = serverSubLevel.logicalPose().transformPosition(getBlockPos().getCenter());
+//            final Vec3 newHyperdrivePosition = hyperdrivePosition.multiply(scale, 1.0, scale);
+//            final Vector3d shift = new Vector3d(newHyperdrivePosition.x - hyperdrivePosition.x, newHyperdrivePosition.y - hyperdrivePosition.y, newHyperdrivePosition.z - hyperdrivePosition.z);
+//
+//            final Vector3d newSublevelPosition = sublevelPosition.add(shift, new Vector3d());
+//
+//            CreateHyperdrive.LOGGER.debug("[Hyperdrive::triggerTeleportation] trying to teleport to {} in {}", newSublevelPosition, target);
+//            if (!MathHelper.subLevelChainIntersectsAny(serverSubLevel, targetLevel, ALLOW_LIST, shift)) {
+//                stateMachine.failedLastTeleport = false; // update stateMachine before we teleport
+//
+//                sourceLevel.playSound(null, hyperdrivePosition.x, hyperdrivePosition.y, hyperdrivePosition.z, AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
+//                SubLevelWarper.WarpSubLevel(serverSubLevel, targetLevel, newSublevelPosition);
+//                targetLevel.playSound(null, newHyperdrivePosition.x, newHyperdrivePosition.y, newHyperdrivePosition.z, AllSounds.HYPERDRIVE_ACTIVATE_SUCCEEDED.get(), SoundSource.MASTER, 3f, 0.5f);
+//
+//                final RandomSource random = sourceLevel.getRandom();
+//                final Vec3 motionA = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
+//                final Vec3 motionB = VecHelper.offsetRandomly(Vec3.ZERO, random, 5.0f);
+//
+//                sourceLevel.sendParticles(ParticleTypes.DRAGON_BREATH, hyperdrivePosition.x, hyperdrivePosition.y, hyperdrivePosition.z, 1000, motionA.x, motionA.y, motionA.z, 2.0);
+//                targetLevel.sendParticles(ParticleTypes.DRAGON_BREATH, newHyperdrivePosition.x, newHyperdrivePosition.y, newHyperdrivePosition.z, 1000, motionB.x, motionB.y, motionB.z, 2.0);
+//
+//                return;
+//            } else {
+//                level.playSound(null, BlockPos.containing(hyperdrivePosition), AllSounds.HYPERDRIVE_ACTIVATE_FAILED.get(), SoundSource.MASTER, 1.5f, 1f);
+//            }
+//        }
+//        stateMachine.failedLastTeleport = true;
     }
 
     @Override
@@ -352,7 +400,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
         compound.putBoolean("failed_last_teleport", stateMachine.failedLastTeleport);
 
         if (clientPacket) {
-            compound.putBoolean("should_tick", shouldTick);
+            compound.putBoolean("would_teleport_collide", wouldTeleportCollide);
         }
 
         super.write(compound, registries, clientPacket);
@@ -365,14 +413,14 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
         stateMachine.failedLastTeleport = compound.getBoolean("failed_last_teleport");
 
         if (clientPacket) {
-            shouldTick = compound.getBoolean("should_tick");
+            wouldTeleportCollide = compound.getBoolean("would_teleport_collide");
         }
 
         super.read(compound, registries, clientPacket);
     }
 
     public AABB getBoundingBox(final BlockState state) {
-        return Shulker.getProgressAabb(1.0F, state.getValue(HyperdriveBlock.FACING), Math.abs(getOpenProgress(stateMachine.getCurrentProgress(), 0)));
+        return Shulker.getProgressAabb(1.0F, state.getValue(HyperdriveBlock.FACING), Math.abs(HyperdriveRenderer.getOpenProgress(this)));
     }
 
     public ItemStack getItemStackWithData() {
@@ -438,6 +486,18 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
         public String getTranslationKey() {
             return translationKey;
         }
+    }
+
+    private record TeleportContext(
+            ServerSubLevel serverSubLevel,
+            ServerLevel sourceLevel,
+            ServerLevel targetLevel,
+            ResourceKey<Level> target,
+            Vec3 hyperdrivePosition,
+            Vec3 newHyperdrivePosition,
+            Vector3d newSublevelPosition,
+            Vector3d shift
+    ) {
     }
 
     private static class TargetDimensionValueBox extends CenteredSideValueBoxTransform {
@@ -511,36 +571,38 @@ public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGo
             currentProgress = value;
         }
 
-        public void tick() {
+        public boolean tick() {
             if (phase instanceof Phase.Charging(final ShulkerStatus status)) {
                 final int work = (int) Math.round(speedSupplier.get() * status.chargeSpeedMultiplier());
                 currentProgress += work;
 
                 if (Math.abs(currentProgress) >= targetChargeProgress()) {
                     setPhase(Phase.active());
+                    return true;
                 }
-                return;
-            }
-
-            if (phase instanceof Phase.Active) {
+            } else if (phase instanceof Phase.Active) {
                 currentProgress += 1;
 
                 if (currentProgress >= ACTIVE_TICKS) {
                     setPhase(Phase.cooldown());
                     onTrigger.run();  // this needs to run after we change the phase or whenever sable teleports the contraption it will trigger again
+                    return true;
                 }
             }
+            return false;
             // we don't tick cooldown here, only in the lazyTick
         }
 
-        public void lazyTick() {
+        public boolean lazyTick() {
             if (phase instanceof Phase.Cooldown) {
                 currentProgress += LAZY_TICK_RATE;
 
                 if (currentProgress >= targetCooldownProgress()) {
                     setPhase(Phase.charging(ShulkerStatus.NORMAL));
+                    return true;
                 }
             }
+            return false;
         }
 
         public void moveTowardsZero() {
