@@ -1,7 +1,10 @@
 package com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive;
 
 import com.github.raspberry1111.create_hyperdrive.*;
+import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.Phase;
+import com.github.raspberry1111.create_hyperdrive.blocks.hyperdrive.HyperdriveBlockEntity.HyperdriveStateMachine.ShulkerStatus;
 import com.github.raspberry1111.create_hyperdrive.utility.MathHelper;
+import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.CenteredSideValueBoxTransform;
@@ -14,6 +17,7 @@ import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.createmod.catnip.animation.LerpedFloat;
 import net.createmod.catnip.lang.Lang;
+import net.createmod.catnip.lang.LangNumberFormat;
 import net.createmod.catnip.math.VecHelper;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
@@ -49,9 +53,13 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
+import static com.github.raspberry1111.create_hyperdrive.ComponentBuilder.builder;
+import static com.github.raspberry1111.create_hyperdrive.ComponentBuilder.translate;
+import static net.minecraft.ChatFormatting.*;
+
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
-public class HyperdriveBlockEntity extends KineticBlockEntity {
+public class HyperdriveBlockEntity extends KineticBlockEntity implements IHaveGoggleInformation {
     public static final List<ResourceLocation> ALLOW_LIST = List.of(
             ResourceLocation.fromNamespaceAndPath("minecraft", "air"),
             ResourceLocation.fromNamespaceAndPath("minecraft", "void_air"),
@@ -62,33 +70,103 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
     private ScrollOptionBehaviour<TargetDimension> targetDimension;
     private boolean shouldTick = false;
 
-
     public HyperdriveBlockEntity(final BlockEntityType<?> type, final BlockPos pos, final BlockState state) {
         super(type, pos, state);
         setLazyTickRate(HyperdriveStateMachine.LAZY_TICK_RATE);
         stateMachine = new HyperdriveStateMachine(this::getSpeed, this::triggerTeleportation);
     }
 
+    @Override
+    public boolean addToGoggleTooltip(final List<Component> tooltip, final boolean isPlayerSneaking) {
+        super.addToGoggleTooltip(tooltip, isPlayerSneaking);
+
+        final HyperdriveStateMachine.Phase phase = getPhase();
+
+        builder().space().forGoggles(tooltip);
+
+        final var phaseHeader = translate("tooltip.hyperdrive.phase").style(GRAY);
+        switch (phase) {
+            case final Phase.Cooldown ignored -> {
+                phaseHeader.add(translate("tooltip.hyperdrive.phase.cooldown").style(DARK_GRAY)).forGoggles(tooltip);
+            }
+            case final Phase.Active ignored -> {
+                phaseHeader.add(translate("tooltip.hyperdrive.phase.active").style(DARK_PURPLE)).forGoggles(tooltip);
+            }
+            case Phase.Charging(final ShulkerStatus shulkerStatus) -> {
+                phaseHeader.add(translate("tooltip.hyperdrive.phase.charging").style(AQUA)).forGoggles(tooltip);
+
+                final var statusHeader = translate("tooltip.hyperdrive.shulker_status").style(GRAY);
+                switch (shulkerStatus) {
+                    case EXHAUSTED ->
+                            statusHeader.add(translate("tooltip.hyperdrive.shulker_status.exhausted").style(DARK_GRAY)).forGoggles(tooltip);
+                    case NORMAL ->
+                            statusHeader.add(translate("tooltip.hyperdrive.shulker_status.normal").style(AQUA)).forGoggles(tooltip);
+                    case INFUSED ->
+                            statusHeader.add(translate("tooltip.hyperdrive.shulker_status.infused").style(DARK_PURPLE)).forGoggles(tooltip);
+                }
+            }
+        }
+
+        builder().space().forGoggles(tooltip);
+
+        final double progress = Math.abs((double) getCurrentProgress()) / stateMachine.targetProgress();
+        translate("tooltip.hyperdrive.progress").style(GRAY)
+                .add(
+                        builder().text(LangNumberFormat.format(
+                                (int) (progress * 100))
+                        ).style(progress > 0.85 ? AQUA :
+                                progress > 0.60 ? YELLOW :
+                                progress > 0.25 ? GOLD :
+                                progress > 0.05 ? RED : DARK_GRAY)
+                )
+                .add(builder().text("%").style(DARK_GRAY))
+                .forGoggles(tooltip);
+
+        builder().space().forGoggles(tooltip);
+
+        if (stateMachine.failedLastTeleport) {
+            translate("tooltip.hyperdrive.failed_last").style(GRAY).forGoggles(tooltip);
+            translate("tooltip.hyperdrive.failed.would_collide").style(RED).forGoggles(tooltip, 1);
+        }
+
+        boolean failedHeader = false;
+
+        if (SableCompanion.INSTANCE.getContaining(this) == null) {
+            failedHeader = true;
+            translate("tooltip.hyperdrive.failed").style(GRAY).forGoggles(tooltip);
+            translate("tooltip.hyperdrive.failed.not_on_sublevel").style(RED).forGoggles(tooltip, 1);
+        }
+
+        if (!shouldTick() && isSpeedRequirementFulfilled()) {
+            if (!failedHeader) {
+                translate("tooltip.hyperdrive.failed").style(GRAY).forGoggles(tooltip);
+            }
+            if (isTargetDimensionCurrent()) {
+                translate("tooltip.hyperdrive.failed.target_dimension").style(RED).forGoggles(tooltip, 1);
+            } else { // we must be colliding with something then
+                translate("tooltip.hyperdrive.failed.would_collide").style(RED).forGoggles(tooltip, 1);
+            }
+        }
+
+        return true;
+    }
+
     public float getOpenProgress(final float progress, final float partialTick) {
         float partialWork;
 
-//        if (partialTick == 0 || !shouldTick()) {
-//            partialWork = 0;
-//        } else {
         partialWork = partialTick * (float) stateMachine.chargeSpeedMultiplier();
-//        }
 
         if (!shouldTick()) {
             partialWork = 0;
         }
 
         final var openProgress = switch (stateMachine.phase) {
-            case final HyperdriveStateMachine.Phase.Cooldown ignored -> 0;
-            case final HyperdriveStateMachine.Phase.Active ignored -> (HyperdriveStateMachine.ACTIVE_TICKS -
+            case final Phase.Cooldown ignored -> 0;
+            case final Phase.Active ignored -> (HyperdriveStateMachine.ACTIVE_TICKS -
                     (progress + partialWork) // progress during active is always positive so we can just add
             )
                     / HyperdriveStateMachine.ACTIVE_TICKS;
-            case final HyperdriveStateMachine.Phase.Charging ignored -> {
+            case final Phase.Charging ignored -> {
                 float speed = getSpeed();
                 if (!shouldTick() && progress != 0) {
                     speed = -Math.signum(progress) * HyperdriveStateMachine.DECAY_RATE;
@@ -133,6 +211,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             return true;
         }
     }
+
 
     public boolean shouldTick() {
         if (level != null && !level.isClientSide()) {
@@ -402,6 +481,14 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
             this.phase = phase;
         }
 
+        public int targetProgress() {
+            return switch (phase) {
+                case final Phase.Cooldown ignored -> targetCooldownProgress();
+                case final Phase.Charging ignored -> targetChargeProgress();
+                case final Phase.Active ignored -> ACTIVE_TICKS;
+            };
+        }
+
         public int targetChargeProgress() {
             return AllConfigs.server().chargeTicks.get() * 256; // the chargeTicks represents at 256 rpm
         }
@@ -457,7 +544,7 @@ public class HyperdriveBlockEntity extends KineticBlockEntity {
         }
 
         public void moveTowardsZero() {
-            if (Math.abs(currentProgress) < 8) {
+            if (Math.abs(currentProgress) <= 8) {
                 setCurrentProgress(0);
             } else if (currentProgress < 0) {
                 setCurrentProgress(currentProgress + DECAY_RATE);

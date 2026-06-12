@@ -54,6 +54,26 @@ public class CreateHyperdrive {
             HyperdriveBlockEntity.TargetDimension.provideLang(langConsumer);
             AllCreativeModeTabs.provideLang(langConsumer);
             AllSounds.provideLang(langConsumer);
+
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.phase", "Phase: ");
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.phase.cooldown", "Cooldown");
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.phase.charging", "Charging");
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.phase.active", "Active");
+
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.shulker_status", "Shulker Status: ");
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.shulker_status.exhausted", "Exhausted");
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.shulker_status.normal", "Normal");
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.shulker_status.infused", "Infused");
+
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.progress", "Progress: ");
+
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.failed", "Unable to Teleport:");
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.failed.not_on_sublevel", "Not in a Sublevel!");
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.failed.target_dimension", "Target dimension is current dimension!");
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.failed.would_collide", "Teleportation would collide with a block!");
+
+            langConsumer.accept(MODID + ".tooltip.hyperdrive.failed_last", "Failed Previous Teleport Attempt:");
+
         });
 
         BlockEntityRegistry.PublishCompoundPosFixer(MODID, Set.of("hyperdrive"), Set.of("Source"));
