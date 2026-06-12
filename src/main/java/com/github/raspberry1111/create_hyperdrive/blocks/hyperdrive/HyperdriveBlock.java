@@ -157,4 +157,21 @@ public class HyperdriveBlock extends DirectionalKineticBlock implements IBE<Hype
         drops.add(stack);
         return drops;
     }
+
+    @Override
+    public boolean isSignalSource(final BlockState state) {
+        return true;
+    }
+
+    @Override
+    public int getSignal(final BlockState state, final BlockGetter level, final BlockPos pos, final Direction direction) {
+        final BlockEntity be = level.getBlockEntity(pos);
+
+        if (be instanceof final HyperdriveBlockEntity hyperdrive && !(hyperdrive.getPhase() instanceof
+                HyperdriveBlockEntity.HyperdriveStateMachine.Phase.Active)) { // we check for active to make sure the redstone updates BEFORE we teleport. Sable won't automatically update neighbors after the tp
+            return hyperdrive.redstonePower();
+        } else {
+            return 0;
+        }
+    }
 }
