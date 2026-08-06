@@ -4,6 +4,19 @@
 
 Adds a Hyperdrive block, which allows for sable contraptions to teleport between dimensions
 
+(Recommended to be used alongside the [Create: Aeronautics](https://modrinth.com/mod/create-aeronautics) mod
+
+## Mechanics
+To acquire a hyperdrive in survival, first craft the empty hyperdrive then right click on a shulker. You can also shift-right click on a shulker box (even colored ones) to put the shulker back down.
+
+The hyperdrive by default requires 32rpm to start charging, and must be located inside a sublevel with it's target dimension set to a different one than the current (Goggles work and will give info on why it's not teleporting)
+
+One triggering, it will enter a cooldown period. A bottle of dragon's breath can be used to immediately end the cooldown, at the cost of exhausting the shulker and making it's next charge time take longer
+
+Using dragon's breath on a hyperdrive that is not in cooldown will infuse the shulker and make it charge quicker. If the shulker is exhausted, it will instead put it into the normal state.
+
+
+
 <br/>
 
 <details>
